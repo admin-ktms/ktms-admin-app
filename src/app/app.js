@@ -134,38 +134,7 @@ export async function renderRoute(page, route, admin) {
   `;
 }
 
-async function renderDashboard(content) {
-  try {
-    const data = await adminApi("dashboard.summary");
 
-    const cards = [
-      ["Tournaments", data.tournaments],
-      ["Registration Requests", data.registrationRequests],
-      ["Players", data.players],
-      ["Transactions", data.transactions],
-      ["Notifications", data.notifications],
-      ["Support Cases", data.supportCases],
-      ["Awaiting Verification", data.awaitingVerification]
-    ];
-
-    content.innerHTML = `
-      <div class="ktms-dashboard-grid">
-        ${cards.map(([label, value]) => `
-          <article class="ktms-stat-card">
-            <strong>${Number(value ?? 0)}</strong>
-            <span>${label}</span>
-          </article>
-        `).join("")}
-      </div>
-    `;
-  } catch (error) {
-    content.innerHTML = `
-      <div class="ktms-error-state">
-        ${escapeHtml(error.message)}
-      </div>
-    `;
-  }
-}
 
 function escapeHtml(value) {
   return String(value)
