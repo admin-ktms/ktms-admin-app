@@ -83,7 +83,7 @@ export function renderAppShell(app, admin, route) {
   return document.getElementById("ktms-page");
 }
 
-export async function renderRoute(page, route) {
+export async function renderRoute(page, route, admin) {
   const titles = {
     dashboard: "Dashboard",
     tournaments: "Tournaments",
@@ -117,7 +117,7 @@ export async function renderRoute(page, route) {
   const content = document.getElementById("ktms-page-content");
 
   if (route === "dashboard") {
-    await renderDashboard(content);
+    await renderDashboard(content, admin);
     return;
   }
 
