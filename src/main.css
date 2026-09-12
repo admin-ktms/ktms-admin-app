@@ -1,0 +1,240 @@
+:root {
+  --ktms-foreground: #F5F7FA;
+  --ktms-primary: #00D9FF;
+  --ktms-secondary: #8B95A5;
+  --ktms-secondary-bg: #11151D;
+  --ktms-background: #080A0F;
+  --ktms-body-text: #F5F7FA;
+  --ktms-link: #00D9FF;
+  --ktms-border: #252B36;
+  --ktms-tertiary: #FFC857;
+  --ktms-input: #11151D;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+}
+
+body {
+  background: var(--ktms-background);
+  color: var(--ktms-body-text);
+  font-family:
+    Inter,
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
+}
+
+button,
+input {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+.ktms-login {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.ktms-login-card {
+  width: min(420px, 100%);
+  padding: 32px;
+  background: var(--ktms-secondary-bg);
+  border: 1px solid var(--ktms-border);
+  border-radius: 14px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
+}
+
+.ktms-brand {
+  margin-bottom: 28px;
+}
+
+.ktms-brand-title {
+  color: var(--ktms-primary);
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+
+.ktms-brand-subtitle {
+  margin-top: 4px;
+  color: var(--ktms-secondary);
+  font-size: 12px;
+}
+
+.ktms-login-card h1 {
+  margin: 0 0 8px;
+  font-size: 25px;
+}
+
+#login-description {
+  margin: 0 0 24px;
+  color: var(--ktms-secondary);
+  line-height: 1.5;
+  font-size: 14px;
+}
+
+.ktms-message {
+  min-height: 22px;
+  margin-bottom: 16px;
+  color: var(--ktms-secondary);
+  font-size: 13px;
+}
+
+.ktms-login-card label {
+  display: block;
+  margin-bottom: 8px;
+  color: var(--ktms-foreground);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.ktms-login-card input {
+  width: 100%;
+  height: 46px;
+  margin-bottom: 16px;
+  padding: 0 13px;
+  color: var(--ktms-foreground);
+  background: var(--ktms-input);
+  border: 1px solid var(--ktms-border);
+  border-radius: 8px;
+  outline: none;
+}
+
+.ktms-login-card input:focus {
+  border-color: var(--ktms-primary);
+  box-shadow: 0 0 0 2px rgba(0, 217, 255, 0.12);
+}
+
+.ktms-login-card button {
+  width: 100%;
+  min-height: 46px;
+  padding: 10px 16px;
+  border: 0;
+  border-radius: 8px;
+  color: #080A0F;
+  background: var(--ktms-primary);
+  font-weight: 800;
+  letter-spacing: 0.03em;
+}
+
+.ktms-login-card button:hover {
+  filter: brightness(1.08);
+}
+
+.ktms-login-card .secondary-button {
+  margin-top: 10px;
+  color: var(--ktms-foreground);
+  background: transparent;
+  border: 1px solid var(--ktms-border);
+}
+
+.ktms-admin-shell {
+  min-height: 100vh;
+  background: var(--ktms-background);
+}
+
+.ktms-admin-header {
+  min-height: 72px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 14px 24px;
+  background: var(--ktms-secondary-bg);
+  border-bottom: 1px solid var(--ktms-border);
+}
+
+.ktms-admin-user {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  color: var(--ktms-secondary);
+  font-size: 13px;
+}
+
+.ktms-admin-user strong {
+  color: var(--ktms-foreground);
+}
+
+.ktms-admin-user button {
+  min-height: 36px;
+  padding: 7px 12px;
+  color: var(--ktms-foreground);
+  background: transparent;
+  border: 1px solid var(--ktms-border);
+  border-radius: 7px;
+}
+
+.ktms-dashboard {
+  padding: 28px;
+}
+
+.ktms-dashboard h1 {
+  margin: 0 0 24px;
+  font-size: 28px;
+}
+
+.ktms-dashboard-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 14px;
+}
+
+.ktms-dashboard-grid > div {
+  min-height: 110px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 20px;
+  background: var(--ktms-secondary-bg);
+  border: 1px solid var(--ktms-border);
+  border-radius: 12px;
+}
+
+.ktms-dashboard-grid strong {
+  color: var(--ktms-primary);
+  font-size: 28px;
+}
+
+.ktms-dashboard-grid span {
+  margin-top: 6px;
+  color: var(--ktms-secondary);
+  font-size: 13px;
+}
+
+@media (max-width: 600px) {
+  .ktms-login-card {
+    padding: 24px;
+  }
+
+  .ktms-admin-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .ktms-admin-user {
+    width: 100%;
+    justify-content: space-between;
+    flex-wrap: wrap;
+  }
+
+  .ktms-dashboard {
+    padding: 20px;
+  }
+}
