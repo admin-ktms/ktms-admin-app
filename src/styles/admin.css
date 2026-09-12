@@ -941,3 +941,671 @@ a:hover {
     transition: none !important;
   }
 }
+
+/* =========================================================
+   KTMS ADMIN CONSOLE
+   APPLICATION SHELL
+   ========================================================= */
+
+.ktms-app {
+  display: flex;
+  min-height: 100vh;
+
+  background: var(--ktms-bg);
+}
+
+
+/* =========================================================
+   SIDEBAR
+   ========================================================= */
+
+.ktms-sidebar {
+  position: fixed;
+  inset: 0 auto 0 0;
+  z-index: 20;
+
+  display: flex;
+  flex-direction: column;
+
+  width: 248px;
+  height: 100vh;
+
+  border-right: 1px solid var(--ktms-border);
+
+  background:
+    linear-gradient(
+      180deg,
+      #0D1118 0%,
+      var(--ktms-bg) 100%
+    );
+}
+
+.ktms-sidebar-brand {
+  padding: 24px 22px 22px;
+
+  border-bottom: 1px solid var(--ktms-border);
+}
+
+.ktms-brand-title {
+  color: var(--ktms-text);
+
+  font-size: 23px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+}
+
+.ktms-brand-title::after {
+  content: "";
+
+  display: inline-block;
+
+  width: 7px;
+  height: 7px;
+
+  margin-left: 5px;
+  margin-bottom: 2px;
+
+  border-radius: 50%;
+
+  background: var(--ktms-gold);
+}
+
+.ktms-brand-subtitle {
+  margin-top: 3px;
+
+  color: var(--ktms-text-muted);
+
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+
+/* =========================================================
+   NAVIGATION
+   ========================================================= */
+
+.ktms-navigation {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+
+  gap: 3px;
+
+  padding: 16px 10px;
+
+  overflow-y: auto;
+}
+
+.ktms-nav-item {
+  position: relative;
+
+  width: 100%;
+  min-height: 39px;
+
+  padding: 0 13px;
+
+  border: 1px solid transparent;
+  border-radius: var(--ktms-radius-sm);
+
+  background: transparent;
+
+  color: var(--ktms-text-muted);
+
+  font-size: 12px;
+  font-weight: 600;
+
+  text-align: left;
+
+  transition:
+    background 150ms ease,
+    border-color 150ms ease,
+    color 150ms ease;
+}
+
+.ktms-nav-item:hover {
+  background: rgba(255, 255, 255, 0.035);
+  color: var(--ktms-text);
+}
+
+.ktms-nav-item.active {
+  border-color: var(--ktms-primary-border);
+
+  background: var(--ktms-primary-soft);
+
+  color: var(--ktms-primary);
+}
+
+.ktms-nav-item.active::before {
+  content: "";
+
+  position: absolute;
+  left: -1px;
+  top: 8px;
+  bottom: 8px;
+
+  width: 2px;
+
+  border-radius: 0 2px 2px 0;
+
+  background: var(--ktms-primary);
+}
+
+
+/* =========================================================
+   MAIN APPLICATION AREA
+   ========================================================= */
+
+.ktms-main {
+  min-width: 0;
+  width: calc(100% - 248px);
+
+  margin-left: 248px;
+
+  min-height: 100vh;
+
+  background: var(--ktms-bg);
+}
+
+
+/* =========================================================
+   TOP BAR
+   ========================================================= */
+
+.ktms-topbar {
+  position: sticky;
+  top: 0;
+  z-index: 15;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  min-height: 68px;
+
+  padding: 0 28px;
+
+  border-bottom: 1px solid var(--ktms-border);
+
+  background:
+    rgba(8, 10, 15, 0.94);
+
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
+.ktms-topbar-title {
+  color: var(--ktms-text);
+
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.ktms-admin-user {
+  display: flex;
+  align-items: center;
+
+  gap: 16px;
+}
+
+.ktms-admin-user > div {
+  display: flex;
+  flex-direction: column;
+
+  min-width: 0;
+
+  text-align: right;
+}
+
+.ktms-admin-user strong {
+  color: var(--ktms-text);
+
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.ktms-admin-user span {
+  margin-top: 1px;
+
+  color: var(--ktms-text-muted);
+
+  font-size: 10px;
+}
+
+#logout-button {
+  min-height: 34px;
+
+  padding: 0 12px;
+
+  border: 1px solid var(--ktms-border);
+  border-radius: var(--ktms-radius-sm);
+
+  background: transparent;
+
+  color: var(--ktms-text-muted);
+
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+}
+
+#logout-button:hover {
+  border-color: rgba(255, 92, 108, 0.35);
+
+  background: var(--ktms-danger-soft);
+
+  color: var(--ktms-danger);
+}
+
+
+/* =========================================================
+   PAGE HEADER
+   ========================================================= */
+
+.ktms-page-header {
+  padding: 26px 28px 0;
+}
+
+.ktms-page-header h1 {
+  margin: 0;
+
+  color: var(--ktms-text);
+
+  font-size: 26px;
+  font-weight: 750;
+  letter-spacing: -0.025em;
+}
+
+.ktms-page-header p {
+  margin: 4px 0 0;
+
+  color: var(--ktms-text-muted);
+
+  font-size: 12px;
+}
+
+
+/* =========================================================
+   DASHBOARD
+   ========================================================= */
+
+.ktms-dashboard-grid {
+  display: grid;
+
+  grid-template-columns:
+    repeat(4, minmax(0, 1fr));
+
+  gap: 14px;
+
+  margin-bottom: 28px;
+}
+
+.ktms-stat-card {
+  position: relative;
+
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+
+  min-height: 128px;
+
+  padding: 18px;
+
+  border: 1px solid var(--ktms-border);
+  border-radius: var(--ktms-radius-lg);
+
+  background:
+    linear-gradient(
+      145deg,
+      var(--ktms-surface-raised),
+      var(--ktms-surface)
+    );
+
+  color: var(--ktms-text);
+
+  text-align: left;
+
+  box-shadow: var(--ktms-shadow-sm);
+
+  transition:
+    transform 150ms ease,
+    border-color 150ms ease,
+    background 150ms ease;
+}
+
+.ktms-stat-card:hover {
+  transform: translateY(-2px);
+
+  border-color: var(--ktms-primary-border);
+
+  background:
+    linear-gradient(
+      145deg,
+      #171D27,
+      var(--ktms-surface)
+    );
+}
+
+.ktms-stat-card::before {
+  content: "";
+
+  position: absolute;
+  top: 0;
+  left: 18px;
+
+  width: 28px;
+  height: 2px;
+
+  border-radius: 0 0 2px 2px;
+
+  background: var(--ktms-primary);
+}
+
+.ktms-stat-card strong {
+  display: block;
+
+  color: var(--ktms-text);
+
+  font-size: 30px;
+  font-weight: 750;
+  line-height: 1;
+}
+
+.ktms-stat-card span {
+  display: block;
+
+  margin-top: auto;
+
+  color: var(--ktms-text-muted);
+
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.ktms-stat-card-attention {
+  border-color: var(--ktms-gold-border);
+
+  background:
+    linear-gradient(
+      145deg,
+      rgba(255, 200, 87, 0.08),
+      var(--ktms-surface)
+    );
+}
+
+.ktms-stat-card-attention::before {
+  background: var(--ktms-gold);
+}
+
+.ktms-stat-card-attention strong {
+  color: var(--ktms-gold);
+}
+
+
+/* =========================================================
+   DASHBOARD SECTIONS
+   ========================================================= */
+
+.ktms-dashboard-section {
+  margin-top: 24px;
+}
+
+.ktms-section-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+
+  margin-bottom: 12px;
+}
+
+.ktms-section-header h3 {
+  margin: 0;
+
+  color: var(--ktms-text);
+
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.ktms-section-header p {
+  margin: 3px 0 0;
+
+  color: var(--ktms-text-muted);
+
+  font-size: 11px;
+}
+
+
+/* =========================================================
+   OPERATIONAL FOCUS
+   ========================================================= */
+
+.ktms-focus-grid {
+  display: grid;
+
+  grid-template-columns:
+    repeat(4, minmax(0, 1fr));
+
+  gap: 12px;
+}
+
+.ktms-focus-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  min-height: 68px;
+
+  padding: 14px 16px;
+
+  border: 1px solid var(--ktms-border);
+  border-radius: var(--ktms-radius-md);
+
+  background: var(--ktms-surface);
+
+  color: var(--ktms-text);
+
+  text-align: left;
+
+  transition:
+    border-color 150ms ease,
+    background 150ms ease;
+}
+
+.ktms-focus-item:hover {
+  border-color: var(--ktms-primary-border);
+
+  background: var(--ktms-surface-hover);
+}
+
+.ktms-focus-item span {
+  max-width: 75%;
+
+  color: var(--ktms-text-muted);
+
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.ktms-focus-item strong {
+  color: var(--ktms-primary);
+
+  font-size: 20px;
+  font-weight: 750;
+}
+
+
+/* =========================================================
+   ATTENTION CENTER
+   ========================================================= */
+
+.ktms-notice-card {
+  position: relative;
+
+  padding: 18px 20px 18px 22px;
+
+  border: 1px solid var(--ktms-gold-border);
+  border-radius: var(--ktms-radius-md);
+
+  background:
+    linear-gradient(
+      135deg,
+      var(--ktms-gold-soft),
+      rgba(17, 21, 29, 0.7)
+    );
+}
+
+.ktms-notice-card::before {
+  content: "";
+
+  position: absolute;
+  left: 0;
+  top: 12px;
+  bottom: 12px;
+
+  width: 3px;
+
+  border-radius: 0 3px 3px 0;
+
+  background: var(--ktms-gold);
+}
+
+.ktms-notice-card strong {
+  color: var(--ktms-gold);
+
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.ktms-notice-card p {
+  margin: 6px 0 0;
+
+  color: var(--ktms-text-muted);
+
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+
+/* =========================================================
+   DASHBOARD LOADING
+   ========================================================= */
+
+.ktms-loading-state {
+  grid-column: 1 / -1;
+
+  min-height: 128px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border: 1px dashed var(--ktms-border-strong);
+  border-radius: var(--ktms-radius-lg);
+
+  color: var(--ktms-text-muted);
+
+  font-size: 12px;
+}
+
+
+/* =========================================================
+   GENERAL ERROR STATE
+   ========================================================= */
+
+.ktms-error-state {
+  padding: 16px 18px;
+
+  border: 1px solid rgba(255, 92, 108, 0.3);
+  border-radius: var(--ktms-radius-md);
+
+  background: var(--ktms-danger-soft);
+
+  color: var(--ktms-danger);
+
+  font-size: 12px;
+}
+
+
+/* =========================================================
+   MOBILE ADMIN CONSOLE
+   ========================================================= */
+
+@media (max-width: 1100px) {
+  .ktms-dashboard-grid {
+    grid-template-columns:
+      repeat(2, minmax(0, 1fr));
+  }
+
+  .ktms-focus-grid {
+    grid-template-columns:
+      repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
+  .ktms-sidebar {
+    position: static;
+
+    width: 100%;
+    height: auto;
+
+    border-right: 0;
+    border-bottom: 1px solid var(--ktms-border);
+  }
+
+  .ktms-app {
+    display: block;
+  }
+
+  .ktms-main {
+    width: 100%;
+    margin-left: 0;
+  }
+
+  .ktms-navigation {
+    display: grid;
+
+    grid-template-columns:
+      repeat(2, minmax(0, 1fr));
+
+    max-height: 280px;
+  }
+
+  .ktms-topbar {
+    padding: 0 16px;
+  }
+
+  .ktms-page-header {
+    padding: 20px 16px 0;
+  }
+
+  .ktms-page {
+    padding: 20px 16px;
+  }
+
+  .ktms-dashboard-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .ktms-focus-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .ktms-admin-user > div {
+    display: none;
+  }
+}
+
+@media (max-width: 430px) {
+  .ktms-navigation {
+    grid-template-columns: 1fr;
+  }
+
+  .ktms-brand-title {
+    font-size: 21px;
+  }
+}
