@@ -160,10 +160,15 @@ async function authenticate() {
 
   } catch (error) {
     console.error("KTMS administrator authentication failed:", error);
-
-    await logout();
-
-    renderLogin();
+  
+    const message = document.getElementById("login-msg");
+  
+    if (message) {
+      message.textContent =
+        `ADMIN AUTHENTICATION FAILED: ${error?.code || "UNKNOWN_ERROR"} — ${error?.message || "Unknown error"}`;
+    }
+  
+    return;
   }
 }
 
