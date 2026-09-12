@@ -1,6 +1,7 @@
 import { adminApi } from "../api/admin-api.js";
 import { navigate } from "./router.js";
 import { renderTournaments } from "../modules/tournaments/tournaments.js";
+import { renderDashboard } from "../modules/dashboard/dashboard.js";
 
 const navigation = [
   ["dashboard", "Dashboard", "/dashboard"],
