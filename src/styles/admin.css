@@ -1,0 +1,943 @@
+/* =========================================================
+   KTMS ADMIN WEB APP
+   Foundational Design System
+   ========================================================= */
+
+:root {
+  /* -------------------------------------------------------
+     KTMS Core Palette
+     ------------------------------------------------------- */
+
+  --ktms-bg: #080A0F;
+  --ktms-surface: #11151D;
+  --ktms-surface-raised: #151A23;
+  --ktms-surface-hover: #191F29;
+
+  --ktms-border: #252B36;
+  --ktms-border-strong: #303846;
+
+  --ktms-primary: #00D9FF;
+  --ktms-primary-soft: rgba(0, 217, 255, 0.12);
+  --ktms-primary-border: rgba(0, 217, 255, 0.35);
+
+  --ktms-gold: #FFC857;
+  --ktms-gold-soft: rgba(255, 200, 87, 0.12);
+  --ktms-gold-border: rgba(255, 200, 87, 0.35);
+
+  --ktms-text: #F5F7FA;
+  --ktms-text-muted: #8B95A5;
+
+  --ktms-success: #35D07F;
+  --ktms-success-soft: rgba(53, 208, 127, 0.12);
+
+  --ktms-danger: #FF5C6C;
+  --ktms-danger-soft: rgba(255, 92, 108, 0.12);
+
+  --ktms-warning: #FFC857;
+  --ktms-warning-soft: rgba(255, 200, 87, 0.12);
+
+  /* -------------------------------------------------------
+     Typography
+     ------------------------------------------------------- */
+
+  --ktms-font:
+    Inter,
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
+
+  /* -------------------------------------------------------
+     Layout
+     ------------------------------------------------------- */
+
+  --ktms-radius-sm: 6px;
+  --ktms-radius-md: 10px;
+  --ktms-radius-lg: 14px;
+
+  --ktms-content-max: 1500px;
+
+  /* -------------------------------------------------------
+     Shadows
+     ------------------------------------------------------- */
+
+  --ktms-shadow-sm:
+    0 2px 8px rgba(0, 0, 0, 0.22);
+
+  --ktms-shadow-md:
+    0 8px 24px rgba(0, 0, 0, 0.28);
+
+  --ktms-shadow-primary:
+    0 0 0 1px rgba(0, 217, 255, 0.08),
+    0 8px 24px rgba(0, 0, 0, 0.24);
+}
+
+
+/* =========================================================
+   RESET / BASE
+   ========================================================= */
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  min-height: 100%;
+  background: var(--ktms-bg);
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+
+  background: var(--ktms-bg);
+  color: var(--ktms-text);
+
+  font-family: var(--ktms-font);
+  font-size: 14px;
+  line-height: 1.5;
+
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+a {
+  color: var(--ktms-primary);
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+
+/* =========================================================
+   PAGE
+   ========================================================= */
+
+.ktms-page {
+  width: 100%;
+  max-width: var(--ktms-content-max);
+  margin: 0 auto;
+  padding: 28px;
+}
+
+.ktms-module {
+  width: 100%;
+}
+
+
+/* =========================================================
+   MODULE HEADER
+   ========================================================= */
+
+.ktms-module-toolbar {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+
+  margin-bottom: 24px;
+}
+
+.ktms-module-toolbar h2 {
+  margin: 0;
+
+  color: var(--ktms-text);
+
+  font-size: 25px;
+  font-weight: 700;
+  letter-spacing: -0.025em;
+}
+
+.ktms-module-toolbar p {
+  margin: 6px 0 0;
+
+  color: var(--ktms-text-muted);
+  font-size: 14px;
+}
+
+
+/* =========================================================
+   BUTTONS
+   ========================================================= */
+
+.ktms-primary-button,
+.ktms-secondary-button,
+.ktms-danger-button {
+  min-height: 40px;
+  padding: 0 16px;
+
+  border-radius: var(--ktms-radius-sm);
+
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+
+  transition:
+    background 160ms ease,
+    border-color 160ms ease,
+    color 160ms ease,
+    transform 160ms ease;
+}
+
+.ktms-primary-button {
+  border: 1px solid var(--ktms-primary);
+  background: var(--ktms-primary);
+  color: #080A0F;
+}
+
+.ktms-primary-button:hover {
+  background: #3DE1FF;
+  border-color: #3DE1FF;
+  transform: translateY(-1px);
+}
+
+.ktms-secondary-button {
+  border: 1px solid var(--ktms-border-strong);
+  background: var(--ktms-surface);
+  color: var(--ktms-text);
+}
+
+.ktms-secondary-button:hover {
+  border-color: var(--ktms-primary-border);
+  color: var(--ktms-primary);
+}
+
+.ktms-danger-button {
+  border: 1px solid rgba(255, 92, 108, 0.4);
+  background: var(--ktms-danger-soft);
+  color: var(--ktms-danger);
+}
+
+.ktms-danger-button:hover {
+  background: rgba(255, 92, 108, 0.18);
+}
+
+
+/* =========================================================
+   TOOLBAR / FILTERS
+   ========================================================= */
+
+.ktms-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+
+  margin-bottom: 18px;
+}
+
+.ktms-toolbar-left,
+.ktms-toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.ktms-filter {
+  min-height: 40px;
+  padding: 0 12px;
+
+  border: 1px solid var(--ktms-border);
+  border-radius: var(--ktms-radius-sm);
+
+  background: var(--ktms-surface);
+  color: var(--ktms-text);
+
+  outline: none;
+}
+
+.ktms-filter:focus {
+  border-color: var(--ktms-primary-border);
+  box-shadow: 0 0 0 3px var(--ktms-primary-soft);
+}
+
+
+/* =========================================================
+   INPUTS / FORMS
+   ========================================================= */
+
+.ktms-form {
+  display: grid;
+  gap: 18px;
+}
+
+.ktms-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.ktms-form-field {
+  display: grid;
+  gap: 7px;
+}
+
+.ktms-form-field-full {
+  grid-column: 1 / -1;
+}
+
+.ktms-form-field label {
+  color: var(--ktms-text);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.ktms-form-field input,
+.ktms-form-field select,
+.ktms-form-field textarea {
+  width: 100%;
+  min-height: 42px;
+
+  padding: 10px 12px;
+
+  border: 1px solid var(--ktms-border);
+  border-radius: var(--ktms-radius-sm);
+
+  background: var(--ktms-surface);
+  color: var(--ktms-text);
+
+  outline: none;
+}
+
+.ktms-form-field textarea {
+  min-height: 100px;
+  resize: vertical;
+}
+
+.ktms-form-field input::placeholder,
+.ktms-form-field textarea::placeholder {
+  color: var(--ktms-text-muted);
+}
+
+.ktms-form-field input:focus,
+.ktms-form-field select:focus,
+.ktms-form-field textarea:focus {
+  border-color: var(--ktms-primary);
+  box-shadow: 0 0 0 3px var(--ktms-primary-soft);
+}
+
+
+/* =========================================================
+   CARDS
+   ========================================================= */
+
+.ktms-card,
+.ktms-detail-card {
+  border: 1px solid var(--ktms-border);
+  border-radius: var(--ktms-radius-lg);
+
+  background:
+    linear-gradient(
+      145deg,
+      var(--ktms-surface-raised),
+      var(--ktms-surface)
+    );
+
+  box-shadow: var(--ktms-shadow-sm);
+}
+
+.ktms-card {
+  padding: 20px;
+}
+
+.ktms-detail-card {
+  padding: 22px;
+}
+
+.ktms-card:hover {
+  border-color: var(--ktms-border-strong);
+}
+
+
+/* =========================================================
+   TOURNAMENT CARDS
+   ========================================================= */
+
+.ktms-tournament-grid {
+  display: grid;
+  grid-template-columns:
+    repeat(auto-fill, minmax(320px, 1fr));
+
+  gap: 18px;
+}
+
+.ktms-tournament-card {
+  position: relative;
+
+  display: flex;
+  flex-direction: column;
+
+  min-height: 265px;
+  padding: 20px;
+
+  overflow: hidden;
+
+  border: 1px solid var(--ktms-border);
+  border-radius: var(--ktms-radius-lg);
+
+  background:
+    linear-gradient(
+      145deg,
+      #151A23 0%,
+      #11151D 65%,
+      #0D1118 100%
+    );
+
+  box-shadow: var(--ktms-shadow-sm);
+
+  transition:
+    transform 160ms ease,
+    border-color 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.ktms-tournament-card::before {
+  content: "";
+
+  position: absolute;
+  top: 0;
+  left: 0;
+
+  width: 100%;
+  height: 2px;
+
+  background: var(--ktms-primary);
+
+  opacity: 0.8;
+}
+
+.ktms-tournament-card:hover {
+  transform: translateY(-2px);
+
+  border-color: var(--ktms-primary-border);
+
+  box-shadow: var(--ktms-shadow-primary);
+}
+
+.ktms-tournament-card-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.ktms-tournament-identity {
+  min-width: 0;
+}
+
+.ktms-tournament-type {
+  display: inline-flex;
+  align-items: center;
+
+  margin-bottom: 10px;
+  padding: 4px 8px;
+
+  border: 1px solid var(--ktms-gold-border);
+  border-radius: 999px;
+
+  background: var(--ktms-gold-soft);
+  color: var(--ktms-gold);
+
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.ktms-tournament-name {
+  margin: 0;
+
+  color: var(--ktms-text);
+
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.ktms-tournament-id {
+  margin-top: 5px;
+
+  color: var(--ktms-text-muted);
+
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11px;
+}
+
+.ktms-tournament-meta {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+
+  gap: 12px;
+
+  margin-top: 22px;
+}
+
+.ktms-tournament-meta-item {
+  min-width: 0;
+}
+
+.ktms-tournament-meta-label {
+  display: block;
+
+  margin-bottom: 3px;
+
+  color: var(--ktms-text-muted);
+
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.ktms-tournament-meta-value {
+  color: var(--ktms-text);
+
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.ktms-tournament-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+
+  margin-top: auto;
+  padding-top: 20px;
+}
+
+.ktms-view-tournament {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+
+  color: var(--ktms-primary);
+
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.ktms-view-tournament:hover {
+  text-decoration: none;
+  color: #5FE5FF;
+}
+
+
+/* =========================================================
+   STATUS BADGES
+   ========================================================= */
+
+.ktms-status {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  min-height: 26px;
+  padding: 4px 9px;
+
+  border: 1px solid var(--ktms-border);
+  border-radius: 999px;
+
+  background: var(--ktms-surface);
+
+  color: var(--ktms-text-muted);
+
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+/*
+   Known operational states.
+   Unknown states safely fall back to the neutral style above.
+*/
+
+.ktms-status-registration-open,
+.ktms-status-active {
+  border-color: var(--ktms-primary-border);
+  background: var(--ktms-primary-soft);
+  color: var(--ktms-primary);
+}
+
+.ktms-status-registration-closed,
+.ktms-status-completed {
+  border-color: var(--ktms-gold-border);
+  background: var(--ktms-gold-soft);
+  color: var(--ktms-gold);
+}
+
+.ktms-status-suspended {
+  border-color: var(--ktms-gold-border);
+  background: var(--ktms-gold-soft);
+  color: var(--ktms-gold);
+}
+
+.ktms-status-archived {
+  color: var(--ktms-text-muted);
+}
+
+.ktms-status-error,
+.ktms-status-failed {
+  border-color: rgba(255, 92, 108, 0.35);
+  background: var(--ktms-danger-soft);
+  color: var(--ktms-danger);
+}
+
+
+/* =========================================================
+   GOLD / COMPETITION ACCENTS
+   ========================================================= */
+
+.ktms-gold {
+  color: var(--ktms-gold);
+}
+
+.ktms-gold-panel {
+  border: 1px solid var(--ktms-gold-border);
+  background: var(--ktms-gold-soft);
+}
+
+.ktms-competition-accent {
+  position: relative;
+}
+
+.ktms-competition-accent::before {
+  content: "";
+
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+
+  width: 3px;
+
+  border-radius: 3px 0 0 3px;
+
+  background: var(--ktms-gold);
+}
+
+
+/* =========================================================
+   TABLES
+   ========================================================= */
+
+.ktms-table-wrap {
+  width: 100%;
+  overflow-x: auto;
+
+  border: 1px solid var(--ktms-border);
+  border-radius: var(--ktms-radius-lg);
+
+  background: var(--ktms-surface);
+}
+
+.ktms-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 720px;
+}
+
+.ktms-table th {
+  padding: 13px 16px;
+
+  border-bottom: 1px solid var(--ktms-border);
+
+  background: #0D1118;
+
+  color: var(--ktms-text-muted);
+
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.07em;
+  text-align: left;
+  text-transform: uppercase;
+}
+
+.ktms-table td {
+  padding: 15px 16px;
+
+  border-bottom: 1px solid var(--ktms-border);
+
+  color: var(--ktms-text);
+
+  font-size: 13px;
+}
+
+.ktms-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.ktms-table tbody tr:hover {
+  background: rgba(255, 255, 255, 0.018);
+}
+
+
+/* =========================================================
+   DETAIL PAGE
+   ========================================================= */
+
+.ktms-detail-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+
+  margin-bottom: 22px;
+}
+
+.ktms-detail-title {
+  margin: 0;
+
+  color: var(--ktms-text);
+
+  font-size: 26px;
+  font-weight: 750;
+  letter-spacing: -0.025em;
+}
+
+.ktms-detail-subtitle {
+  margin: 5px 0 0;
+
+  color: var(--ktms-text-muted);
+}
+
+.ktms-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+
+  gap: 14px;
+
+  margin-bottom: 20px;
+}
+
+.ktms-stat-card {
+  padding: 18px;
+
+  border: 1px solid var(--ktms-border);
+  border-radius: var(--ktms-radius-md);
+
+  background: var(--ktms-surface);
+}
+
+.ktms-stat-label {
+  color: var(--ktms-text-muted);
+
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.ktms-stat-value {
+  margin-top: 5px;
+
+  color: var(--ktms-text);
+
+  font-size: 20px;
+  font-weight: 700;
+}
+
+
+/* =========================================================
+   SECTIONS
+   ========================================================= */
+
+.ktms-section {
+  margin-top: 22px;
+}
+
+.ktms-section-title {
+  margin: 0 0 12px;
+
+  color: var(--ktms-text);
+
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.ktms-section-subtitle {
+  margin: -6px 0 14px;
+
+  color: var(--ktms-text-muted);
+
+  font-size: 12px;
+}
+
+
+/* =========================================================
+   ACTION ROW
+   ========================================================= */
+
+.ktms-action-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+
+  margin-top: 18px;
+}
+
+
+/* =========================================================
+   MESSAGES / STATES
+   ========================================================= */
+
+.ktms-message {
+  min-height: 20px;
+
+  margin-bottom: 14px;
+
+  color: var(--ktms-text-muted);
+
+  font-size: 13px;
+}
+
+.ktms-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+
+  min-height: 260px;
+  padding: 32px;
+
+  border: 1px dashed var(--ktms-border-strong);
+  border-radius: var(--ktms-radius-lg);
+
+  background: rgba(17, 21, 29, 0.55);
+
+  text-align: center;
+}
+
+.ktms-empty-state h3 {
+  margin: 0;
+
+  color: var(--ktms-text);
+
+  font-size: 17px;
+}
+
+.ktms-empty-state p {
+  max-width: 480px;
+
+  margin: 7px 0 0;
+
+  color: var(--ktms-text-muted);
+
+  font-size: 13px;
+}
+
+
+/* =========================================================
+   ERROR STATE
+   ========================================================= */
+
+.ktms-error-state {
+  padding: 18px;
+
+  border: 1px solid rgba(255, 92, 108, 0.3);
+  border-radius: var(--ktms-radius-md);
+
+  background: var(--ktms-danger-soft);
+
+  color: var(--ktms-danger);
+}
+
+
+/* =========================================================
+   LOADING
+   ========================================================= */
+
+.ktms-loading {
+  color: var(--ktms-text-muted);
+
+  font-size: 13px;
+}
+
+
+/* =========================================================
+   RESPONSIVE
+   ========================================================= */
+
+@media (max-width: 1000px) {
+  .ktms-detail-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
+  .ktms-page {
+    padding: 20px 16px;
+  }
+
+  .ktms-module-toolbar,
+  .ktms-detail-header,
+  .ktms-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .ktms-toolbar-left,
+  .ktms-toolbar-right {
+    width: 100%;
+  }
+
+  .ktms-toolbar-left > *,
+  .ktms-toolbar-right > * {
+    flex: 1;
+  }
+
+  .ktms-form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .ktms-form-field-full {
+    grid-column: auto;
+  }
+
+  .ktms-tournament-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .ktms-detail-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .ktms-primary-button,
+  .ktms-secondary-button,
+  .ktms-danger-button {
+    width: 100%;
+  }
+}
+
+
+/* =========================================================
+   REDUCED MOTION
+   ========================================================= */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition: none !important;
+  }
+}
