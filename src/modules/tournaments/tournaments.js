@@ -190,58 +190,94 @@ function updateStatusFilter(tournaments, selectedStatus) {
 
 function renderTournamentRow(tournament) {
   const id = tournament.tournament_id;
+  const status = tournament.tournament_status || "Unknown";
 
   return `
-    <tr>
+    <article class="ktms-tournament-card">
 
-      <td>
-        <strong>${escapeHtml(id)}</strong>
-      </td>
+      <div class="ktms-tournament-card-top">
 
-      <td>
-        ${escapeHtml(tournament.tournament_name)}
-      </td>
+        <div class="ktms-tournament-identity">
 
-      <td>
-        ${escapeHtml(tournament.tournament_type_id)}
-      </td>
+          <div class="ktms-tournament-type">
+            ${escapeHtml(tournament.tournament_type_id || "—")}
+          </div>
 
-      <td>
-        ${escapeHtml(tournament.tournament_edition)}
-      </td>
+          <div>
+            <h3>
+              ${escapeHtml(tournament.tournament_name || "Unnamed Tournament")}
+            </h3>
 
-      <td>
-        ${escapeHtml(tournament.tournament_year)}
-      </td>
+            <span class="ktms-tournament-id">
+              ${escapeHtml(id)}
+            </span>
+          </div>
 
-      <td>
-        <span class="ktms-status">
-          ${escapeHtml(tournament.tournament_status)}
+        </div>
+
+        <span class="ktms-status ktms-status-${statusClass(status)}">
+          ${escapeHtml(status)}
         </span>
-      </td>
 
-      <td>
-        ${formatDate(tournament.tournament_start_date)}
-      </td>
+      </div>
 
-      <td>
-        ${escapeHtml(tournament.maximum_players)}
-      </td>
 
-      <td>
+      <div class="ktms-tournament-meta">
+
+        <div class="ktms-tournament-meta-item">
+          <span>EDITION</span>
+          <strong>${escapeHtml(tournament.tournament_edition || "—")}</strong>
+        </div>
+
+        <div class="ktms-tournament-meta-item">
+          <span>YEAR</span>
+          <strong>${escapeHtml(tournament.tournament_year || "—")}</strong>
+        </div>
+
+        <div class="ktms-tournament-meta-item">
+          <span>START</span>
+          <strong>${formatDate(tournament.tournament_start_date)}</strong>
+        </div>
+
+        <div class="ktms-tournament-meta-item">
+          <span>END</span>
+          <strong>${formatDate(tournament.tournament_end_date)}</strong>
+        </div>
+
+      </div>
+
+
+      <div class="ktms-tournament-card-footer">
+
+        <div class="ktms-player-capacity">
+
+          <div class="ktms-capacity-label">
+            <span>PLAYER CAPACITY</span>
+            <strong>
+              ${escapeHtml(tournament.maximum_players || "—")}
+            </strong>
+          </div>
+
+          <div class="ktms-capacity-track">
+            <div class="ktms-capacity-fill"></div>
+          </div>
+
+        </div>
+
         <button
           type="button"
-          class="ktms-table-action"
+          class="ktms-view-tournament"
           data-tournament-id="${escapeHtml(id)}"
         >
-          VIEW
+          VIEW TOURNAMENT
+          <span>→</span>
         </button>
-      </td>
 
-    </tr>
+      </div>
+
+    </article>
   `;
 }
-
 async function openTournament(tournamentId) {
   const container = document.getElementById("tournaments-list");
 
