@@ -188,7 +188,7 @@ async function renderAdminShell(admin) {
       renderLogin();
     });
 
-  await renderRoute(page, route);
+  await renderRoute(page, route, admin);
 }
 
 async function handleRouteChange() {
