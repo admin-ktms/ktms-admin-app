@@ -126,11 +126,38 @@ async function loadTournaments(status = null) {
       });
 
   } catch (error) {
-    renderErrorState(
-      container,
-      "Unable to load tournaments.",
+    console.error("KTMS TOURNAMENT LIST ERROR", {
+      message: error?.message || null,
+      code: error?.code || null,
+      status: error?.status || null,
       error
-    );
+    });
+
+    container.innerHTML = `
+      <div class="ktms-error-state">
+
+        <h3>Unable to load tournaments</h3>
+
+        <p>
+          ${escapeHtml(
+            error?.message ||
+            "The KTMS Admin API could not load tournament data."
+          )}
+        </p>
+
+        ${
+          error?.code
+            ? `
+              <p class="ktms-error-code">
+                Error code:
+                <strong>${escapeHtml(error.code)}</strong>
+              </p>
+            `
+            : ""
+        }
+
+      </div>
+    `;
   }
 }
 
