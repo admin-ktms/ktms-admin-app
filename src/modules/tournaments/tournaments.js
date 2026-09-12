@@ -278,6 +278,16 @@ function renderTournamentRow(tournament) {
     </article>
   `;
 }
+
+function statusClass(status) {
+  return String(status || "")
+    .toLowerCase()
+    .replaceAll(" ", "-")
+    .replaceAll("_", "-")
+    .replaceAll("/", "-")
+    .replace(/[^a-z0-9-]/g, "");
+}
+
 async function openTournament(tournamentId) {
   const container = document.getElementById("tournaments-list");
 
