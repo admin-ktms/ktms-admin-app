@@ -238,3 +238,194 @@ button {
     padding: 20px;
   }
 }
+
+/* =========================================================
+   KTMS ADMIN DASHBOARD
+   ========================================================= */
+
+.ktms-dashboard-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.ktms-stat-card {
+  appearance: none;
+  width: 100%;
+  min-height: 125px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 8px;
+
+  background: var(--ktms-secondary-bg);
+  color: var(--ktms-foreground);
+
+  border: 1px solid var(--ktms-border);
+  border-radius: 12px;
+
+  text-align: left;
+  cursor: pointer;
+
+  transition:
+    border-color 160ms ease,
+    transform 160ms ease,
+    background 160ms ease;
+}
+
+.ktms-stat-card:hover {
+  border-color: var(--ktms-primary);
+  transform: translateY(-1px);
+}
+
+.ktms-stat-card strong {
+  color: var(--ktms-primary);
+  font-size: 30px;
+  line-height: 1;
+}
+
+.ktms-stat-card span {
+  color: var(--ktms-secondary);
+  font-size: 13px;
+}
+
+.ktms-stat-card-attention {
+  border-color: var(--ktms-tertiary);
+}
+
+.ktms-stat-card-attention strong {
+  color: var(--ktms-tertiary);
+}
+
+.ktms-dashboard-section {
+  margin-top: 24px;
+}
+
+.ktms-section-header {
+  margin-bottom: 12px;
+}
+
+.ktms-section-header h3 {
+  margin: 0;
+  color: var(--ktms-foreground);
+  font-size: 17px;
+}
+
+.ktms-section-header p {
+  margin: 5px 0 0;
+  color: var(--ktms-secondary);
+  font-size: 13px;
+}
+
+.ktms-focus-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.ktms-focus-item {
+  appearance: none;
+  min-height: 82px;
+  padding: 16px;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 15px;
+
+  background: var(--ktms-secondary-bg);
+  color: var(--ktms-foreground);
+
+  border: 1px solid var(--ktms-border);
+  border-radius: 10px;
+
+  cursor: pointer;
+  text-align: left;
+
+  transition:
+    border-color 160ms ease,
+    background 160ms ease;
+}
+
+.ktms-focus-item:hover {
+  border-color: var(--ktms-primary);
+}
+
+.ktms-focus-item span {
+  color: var(--ktms-secondary);
+  font-size: 13px;
+}
+
+.ktms-focus-item strong {
+  color: var(--ktms-primary);
+  font-size: 22px;
+}
+
+.ktms-notice-card {
+  padding: 18px;
+  background: var(--ktms-secondary-bg);
+  border: 1px solid var(--ktms-border);
+  border-radius: 10px;
+}
+
+.ktms-notice-card strong {
+  color: var(--ktms-foreground);
+  font-size: 14px;
+}
+
+.ktms-notice-card p {
+  margin: 8px 0 0;
+  color: var(--ktms-secondary);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.ktms-loading-state {
+  grid-column: 1 / -1;
+  padding: 30px;
+  color: var(--ktms-secondary);
+  background: var(--ktms-secondary-bg);
+  border: 1px solid var(--ktms-border);
+  border-radius: 10px;
+}
+
+
+/* =========================================================
+   DASHBOARD RESPONSIVE
+   ========================================================= */
+
+@media (max-width: 1100px) {
+
+  .ktms-dashboard-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .ktms-focus-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+}
+
+@media (max-width: 600px) {
+
+  .ktms-dashboard-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+
+  .ktms-stat-card {
+    min-height: 105px;
+    padding: 15px;
+  }
+
+  .ktms-stat-card strong {
+    font-size: 25px;
+  }
+
+  .ktms-focus-grid {
+    grid-template-columns: 1fr;
+  }
+
+}
