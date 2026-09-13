@@ -76,7 +76,10 @@ async function loadTournaments(status = null) {
   if (!container) return;
 
   container.innerHTML = "Loading tournaments...";
-  message.textContent = "";
+
+  if (message) {
+    message.textContent = "";
+  }
 
   try {
     const data = await adminApi("tournament.list", {
@@ -205,7 +208,9 @@ function renderTournamentRow(tournament) {
 
           <div>
             <h3>
-              ${escapeHtml(tournament.tournament_name || "Unnamed Tournament")}
+              ${escapeHtml(
+                tournament.tournament_name || "Unnamed Tournament"
+              )}
             </h3>
 
             <span class="ktms-tournament-id">
@@ -221,31 +226,37 @@ function renderTournamentRow(tournament) {
 
       </div>
 
-
       <div class="ktms-tournament-meta">
 
         <div class="ktms-tournament-meta-item">
           <span>EDITION</span>
-          <strong>${escapeHtml(tournament.tournament_edition || "—")}</strong>
+          <strong>
+            ${escapeHtml(tournament.tournament_edition || "—")}
+          </strong>
         </div>
 
         <div class="ktms-tournament-meta-item">
           <span>YEAR</span>
-          <strong>${escapeHtml(tournament.tournament_year || "—")}</strong>
+          <strong>
+            ${escapeHtml(tournament.tournament_year || "—")}
+          </strong>
         </div>
 
         <div class="ktms-tournament-meta-item">
           <span>START</span>
-          <strong>${formatDate(tournament.tournament_start_date)}</strong>
+          <strong>
+            ${formatDate(tournament.tournament_start_date)}
+          </strong>
         </div>
 
         <div class="ktms-tournament-meta-item">
           <span>END</span>
-          <strong>${formatDate(tournament.tournament_end_date)}</strong>
+          <strong>
+            ${formatDate(tournament.tournament_end_date)}
+          </strong>
         </div>
 
       </div>
-
 
       <div class="ktms-tournament-card-footer">
 
@@ -253,6 +264,7 @@ function renderTournamentRow(tournament) {
 
           <div class="ktms-capacity-label">
             <span>PLAYER CAPACITY</span>
+
             <strong>
               ${escapeHtml(tournament.maximum_players || "—")}
             </strong>
@@ -317,6 +329,18 @@ async function openTournament(tournamentId) {
 function renderTournamentDetails(tournament) {
   const page = document.getElementById("ktms-page");
 
+  const summary =
+    tournament.operationalSummary || {};
+
+  const registration =
+    summary.registration || {};
+
+  const competition =
+    summary.competition || {};
+
+  const results =
+    summary.results || {};
+
   page.innerHTML = `
     <div class="ktms-module">
 
@@ -332,17 +356,22 @@ function renderTournamentDetails(tournament) {
 
         <div>
           <h2>
-            ${escapeHtml(tournament.tournament_name)}
+            ${escapeHtml(
+              tournament.tournament_name || "Tournament"
+            )}
           </h2>
 
           <p>
             ${escapeHtml(tournament.tournament_id)}
-            · Edition ${escapeHtml(tournament.tournament_edition)}
+            · Edition
+            ${escapeHtml(tournament.tournament_edition)}
           </p>
         </div>
 
         <span class="ktms-status ktms-status-large">
-          ${escapeHtml(tournament.tournament_status)}
+          ${escapeHtml(
+            tournament.tournament_status || "Unknown"
+          )}
         </span>
 
       </div>
@@ -396,20 +425,33 @@ function renderTournamentDetails(tournament) {
 
         ${detailCard(
           "Registration Opens",
-          formatDateTime(tournament.registration_open_datetime)
+          formatDateTime(
+            tournament.registration_open_datetime
+          )
         )}
 
         ${detailCard(
           "Registration Closes",
-          formatDateTime(tournament.registration_close_datetime)
+          formatDateTime(
+            tournament.registration_close_datetime
+          )
         )}
 
         ${detailCard(
           "Completed",
-          formatDateTime(tournament.tournament_completed_datetime)
+          formatDateTime(
+            tournament.tournament_completed_datetime
+          )
         )}
 
       </div>
+
+      ${renderOperationalSummary(
+        tournament,
+        registration,
+        competition,
+        results
+      )}
 
       <div class="ktms-section">
 
@@ -424,12 +466,6 @@ function renderTournamentDetails(tournament) {
         </div>
 
       </div>
-
-      ${
-        Array.isArray(tournament.matchdays)
-          ? renderMatchdays(tournament.matchdays)
-          : ""
-      }
 
     </div>
   `;
@@ -450,18 +486,131 @@ function renderTournamentDetails(tournament) {
         );
       });
     });
+
+  page
+    .querySelectorAll("[data-tournament-module]")
+    .forEach((button) => {
+      button.addEventListener("click", () => {
+        navigate(button.dataset.tournamentModule);
+      });
+    });
+}
+
+function renderOperationalSummary(
+  tournament,
+  registration,
+  competition,
+  results
+) {
+  return `
+    <div class="ktms-section">
+
+      <div class="ktms-module-toolbar">
+
+        <div>
+          <h3>Operational Summary</h3>
+
+          <p class="ktms-secondary-text">
+            High-level tournament activity. Detailed management remains in the corresponding KTMS modules.
+          </p>
+        </div>
+
+      </div>
+
+      <div class="ktms-detail-grid">
+
+        <article class="ktms-detail-card">
+
+          <span>REGISTRATION</span>
+
+          <strong>
+            ${escapeHtml(
+              registration.registeredPlayers ?? 0
+            )}
+            /
+            ${escapeHtml(
+              registration.maximumPlayers ??
+              tournament.maximum_players ??
+              0
+            )}
+            Players Registered
+          </strong>
+
+          <button
+            type="button"
+            class="ktms-secondary-button"
+            data-tournament-module="/registrations"
+          >
+            OPEN REGISTRATIONS
+          </button>
+
+        </article>
+
+        <article class="ktms-detail-card">
+
+          <span>COMPETITION</span>
+
+          <strong>
+            ${escapeHtml(
+              competition.matchdays ?? 0
+            )}
+            Matchdays
+            ·
+            ${escapeHtml(
+              competition.fixtures ?? 0
+            )}
+            Fixtures
+          </strong>
+
+          <button
+            type="button"
+            class="ktms-secondary-button"
+            data-tournament-module="/matchdays"
+          >
+            OPEN MATCHDAYS
+          </button>
+
+          <button
+            type="button"
+            class="ktms-secondary-button"
+            data-tournament-module="/fixtures"
+          >
+            OPEN FIXTURES
+          </button>
+
+        </article>
+
+        <article class="ktms-detail-card">
+
+          <span>RESULTS</span>
+
+          <strong>
+            ${escapeHtml(
+              results.officialResults ?? 0
+            )}
+            Official Results
+          </strong>
+
+          <button
+            type="button"
+            class="ktms-secondary-button"
+            data-tournament-module="/results"
+          >
+            OPEN RESULTS
+          </button>
+
+        </article>
+
+      </div>
+
+    </div>
+  `;
 }
 
 function renderLifecycleActions(tournament) {
   const status = tournament.tournament_status;
 
   const actions = [];
-
-  /*
-   * These are Core API action names, not frontend business rules.
-   * The frontend only exposes actions that the current Core contract
-   * permits from the known current status.
-   */
 
   if (status === "Registration Open") {
     actions.push([
@@ -533,14 +682,18 @@ async function executeTournamentAction(
   }
 
   try {
-    /*
-     * IMPORTANT:
-     * The production Admin API expects `tournamentAction`.
-     * Do not send `action`.
-     */
-    const updated = await adminApi("tournament.action", {
+    await adminApi("tournament.action", {
       tournamentId,
       tournamentAction
+    });
+
+    /*
+     * Re-fetch through tournament.get rather than trusting the
+     * action response. This guarantees the page receives the
+     * current Core-authoritative operational summary.
+     */
+    const updated = await adminApi("tournament.get", {
+      tournamentId
     });
 
     renderTournamentDetails(updated);
@@ -715,10 +868,6 @@ async function submitCreateTournament(form) {
     "create-tournament-error"
   );
 
-  const submitButton = document.getElementById(
-    "submit-create-tournament"
-  );
-
   errorBox.textContent = "";
 
   const values = new FormData(form);
@@ -736,12 +885,14 @@ async function submitCreateTournament(form) {
     String(values.get("endDate") || "").trim();
 
   if (!tournamentName) {
-    errorBox.textContent = "Tournament Name is required.";
+    errorBox.textContent =
+      "Tournament Name is required.";
     return;
   }
 
   if (!yearValue) {
-    errorBox.textContent = "Tournament Year is required.";
+    errorBox.textContent =
+      "Tournament Year is required.";
     return;
   }
 
@@ -757,12 +908,6 @@ async function submitCreateTournament(form) {
     startDate,
     endDate
   };
-
-  /*
-   * Optional values are only sent when the administrator actually
-   * supplied them. This prevents the browser from overriding
-   * authoritative Core defaults.
-   */
 
   const registrationFee =
     String(values.get("registrationFee") || "").trim();
@@ -793,7 +938,26 @@ async function submitCreateTournament(form) {
       payload
     );
 
-    renderTournamentDetails(tournament);
+    /*
+     * Creation returns the newly-created tournament, but the
+     * authoritative detail response now also contains the
+     * operational summary. Fetch that complete representation.
+     */
+    const tournamentId =
+      tournament?.tournament_id;
+
+    if (!tournamentId) {
+      throw new Error(
+        "Tournament was created but no Tournament ID was returned."
+      );
+    }
+
+    const completeTournament =
+      await adminApi("tournament.get", {
+        tournamentId
+      });
+
+    renderTournamentDetails(completeTournament);
 
   } catch (error) {
     errorBox.textContent = error.message;
@@ -809,64 +973,10 @@ function setCreateButtonState(loading) {
   if (!button) return;
 
   button.disabled = loading;
+
   button.textContent = loading
     ? "CREATING..."
     : "CREATE TOURNAMENT";
-}
-
-function renderMatchdays(matchdays) {
-  if (!matchdays.length) {
-    return "";
-  }
-
-  return `
-    <div class="ktms-section">
-
-      <h3>Generated Matchdays</h3>
-
-      <div class="ktms-table-wrap">
-
-        <table class="ktms-table">
-
-          <thead>
-            <tr>
-              <th>#</th>
-              <th>Matchday</th>
-              <th>Date</th>
-              <th>Stage</th>
-            </tr>
-          </thead>
-
-          <tbody>
-            ${matchdays.map((matchday) => `
-              <tr>
-
-                <td>
-                  ${escapeHtml(matchday.matchdayNumber)}
-                </td>
-
-                <td>
-                  ${escapeHtml(matchday.matchdayId)}
-                </td>
-
-                <td>
-                  ${formatDate(matchday.matchdayDate)}
-                </td>
-
-                <td>
-                  ${escapeHtml(matchday.stage)}
-                </td>
-
-              </tr>
-            `).join("")}
-          </tbody>
-
-        </table>
-
-      </div>
-
-    </div>
-  `;
 }
 
 function detailCard(label, value) {
