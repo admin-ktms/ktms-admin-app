@@ -1609,3 +1609,730 @@ a:hover {
     font-size: 21px;
   }
 }
+/* =========================================================
+   LOGIN / ADMIN AUTHENTICATION SCREEN
+   ========================================================= */
+
+.ktms-login {
+  position: relative;
+
+  min-height: 100vh;
+  min-height: 100dvh;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  padding: 40px 28px;
+
+  overflow: hidden;
+
+  background:
+    radial-gradient(
+      circle at 15% 20%,
+      rgba(0, 217, 255, 0.075),
+      transparent 30%
+    ),
+    radial-gradient(
+      circle at 85% 80%,
+      rgba(255, 200, 87, 0.045),
+      transparent 28%
+    ),
+    #080A0F;
+}
+
+
+/* ---------------------------------------------------------
+   BACKGROUND ORBITS
+   --------------------------------------------------------- */
+
+.ktms-login-orbit {
+  position: absolute;
+
+  border: 1px solid rgba(0, 217, 255, 0.07);
+  border-radius: 50%;
+
+  pointer-events: none;
+}
+
+.ktms-login-orbit-one {
+  width: 620px;
+  height: 620px;
+
+  top: -310px;
+  right: -180px;
+}
+
+.ktms-login-orbit-two {
+  width: 420px;
+  height: 420px;
+
+  bottom: -260px;
+  left: -180px;
+
+  border-color: rgba(255, 200, 87, 0.045);
+}
+
+
+/* ---------------------------------------------------------
+   LOGIN LAYOUT
+   --------------------------------------------------------- */
+
+.ktms-login-layout {
+  position: relative;
+  z-index: 1;
+
+  width: min(980px, 100%);
+
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(380px, 430px);
+
+  align-items: center;
+
+  gap: 80px;
+}
+
+
+/* ---------------------------------------------------------
+   LEFT IDENTITY PANEL
+   --------------------------------------------------------- */
+
+.ktms-login-identity {
+  max-width: 470px;
+}
+
+.ktms-login-mark {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+
+  margin-bottom: 28px;
+
+  color: var(--ktms-primary);
+
+  font-size: 18px;
+  font-weight: 900;
+  letter-spacing: 0.16em;
+}
+
+.ktms-login-mark-line {
+  width: 26px;
+  height: 2px;
+
+  background: var(--ktms-primary);
+
+  box-shadow:
+    0 0 12px rgba(0, 217, 255, 0.65);
+}
+
+.ktms-login-eyebrow {
+  margin-bottom: 16px;
+
+  color: var(--ktms-gold);
+
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+}
+
+.ktms-login-identity h1 {
+  margin: 0;
+
+  color: var(--ktms-text);
+
+  font-size: clamp(38px, 5vw, 58px);
+  font-weight: 800;
+  line-height: 1.02;
+
+  letter-spacing: -0.045em;
+}
+
+.ktms-login-identity h1 span {
+  color: var(--ktms-primary);
+
+  text-shadow:
+    0 0 30px rgba(0, 217, 255, 0.12);
+}
+
+.ktms-login-intro {
+  max-width: 430px;
+
+  margin: 24px 0 0;
+
+  color: var(--ktms-text-muted);
+
+  font-size: 15px;
+  line-height: 1.7;
+}
+
+.ktms-login-authority {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+
+  margin-top: 34px;
+  padding: 11px 14px;
+
+  border: 1px solid var(--ktms-border);
+  border-radius: var(--ktms-radius-md);
+
+  background: rgba(17, 21, 29, 0.65);
+}
+
+.ktms-login-authority-indicator {
+  width: 8px;
+  height: 8px;
+
+  flex: 0 0 auto;
+
+  border-radius: 50%;
+
+  background: var(--ktms-primary);
+
+  box-shadow:
+    0 0 0 4px rgba(0, 217, 255, 0.08),
+    0 0 14px rgba(0, 217, 255, 0.55);
+}
+
+.ktms-login-authority div:last-child {
+  display: grid;
+  gap: 2px;
+}
+
+.ktms-login-authority strong {
+  color: var(--ktms-text);
+
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.ktms-login-authority span {
+  color: var(--ktms-text-muted);
+
+  font-size: 10px;
+}
+
+
+/* ---------------------------------------------------------
+   LOGIN CARD
+   --------------------------------------------------------- */
+
+.ktms-login-card {
+  position: relative;
+
+  width: 100%;
+
+  padding: 30px;
+
+  overflow: hidden;
+
+  border: 1px solid var(--ktms-border);
+  border-radius: 18px;
+
+  background:
+    linear-gradient(
+      145deg,
+      rgba(21, 26, 35, 0.98),
+      rgba(17, 21, 29, 0.98)
+    );
+
+  box-shadow:
+    0 24px 70px rgba(0, 0, 0, 0.42),
+    0 0 0 1px rgba(0, 217, 255, 0.025);
+
+  backdrop-filter: blur(18px);
+}
+
+.ktms-login-card::before {
+  content: "";
+
+  position: absolute;
+
+  top: 0;
+  left: 0;
+  right: 0;
+
+  height: 2px;
+
+  background:
+    linear-gradient(
+      90deg,
+      transparent,
+      var(--ktms-primary),
+      transparent
+    );
+
+  opacity: 0.85;
+}
+
+.ktms-login-card::after {
+  content: "";
+
+  position: absolute;
+
+  width: 180px;
+  height: 180px;
+
+  top: -100px;
+  right: -80px;
+
+  border-radius: 50%;
+
+  background: rgba(0, 217, 255, 0.055);
+
+  filter: blur(35px);
+
+  pointer-events: none;
+}
+
+
+/* ---------------------------------------------------------
+   CARD HEADER
+   --------------------------------------------------------- */
+
+.ktms-login-card-header {
+  position: relative;
+  z-index: 1;
+
+  display: flex;
+  align-items: center;
+  gap: 13px;
+
+  margin-bottom: 18px;
+}
+
+.ktms-login-card-icon {
+  width: 38px;
+  height: 38px;
+
+  display: grid;
+  place-content: center;
+  gap: 3px;
+
+  border: 1px solid var(--ktms-primary-border);
+  border-radius: 10px;
+
+  background: var(--ktms-primary-soft);
+}
+
+.ktms-login-card-icon span {
+  display: block;
+
+  width: 13px;
+  height: 2px;
+
+  background: var(--ktms-primary);
+}
+
+.ktms-login-card-icon span:nth-child(2) {
+  width: 9px;
+}
+
+.ktms-login-card-icon span:nth-child(3) {
+  width: 5px;
+}
+
+.ktms-login-card-kicker {
+  margin-bottom: 2px;
+
+  color: var(--ktms-text-muted);
+
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+}
+
+.ktms-login-card h2 {
+  margin: 0;
+
+  color: var(--ktms-text);
+
+  font-size: 24px;
+  font-weight: 750;
+  letter-spacing: -0.025em;
+}
+
+
+/* ---------------------------------------------------------
+   DESCRIPTION / SECURITY
+   --------------------------------------------------------- */
+
+.ktms-login-description {
+  position: relative;
+  z-index: 1;
+
+  margin: 0;
+
+  color: var(--ktms-text-muted);
+
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.ktms-login-security {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+
+  margin-top: 17px;
+  padding: 5px 8px;
+
+  border: 1px solid rgba(0, 217, 255, 0.12);
+  border-radius: 5px;
+
+  background: rgba(0, 217, 255, 0.045);
+
+  color: var(--ktms-primary);
+
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+}
+
+.ktms-security-dot {
+  width: 5px;
+  height: 5px;
+
+  border-radius: 50%;
+
+  background: var(--ktms-primary);
+
+  box-shadow:
+    0 0 8px rgba(0, 217, 255, 0.7);
+}
+
+
+/* ---------------------------------------------------------
+   LOGIN MESSAGE
+   --------------------------------------------------------- */
+
+.ktms-message {
+  min-height: 20px;
+
+  margin: 18px 0 12px;
+
+  color: var(--ktms-text-muted);
+
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.ktms-message:not(:empty) {
+  padding: 9px 11px;
+
+  border: 1px solid var(--ktms-border);
+  border-radius: 7px;
+
+  background: rgba(8, 10, 15, 0.45);
+}
+
+
+/* ---------------------------------------------------------
+   LOGIN FORM
+   --------------------------------------------------------- */
+
+.ktms-login-form {
+  position: relative;
+  z-index: 1;
+
+  display: grid;
+  gap: 16px;
+}
+
+.ktms-login-field {
+  display: grid;
+  gap: 7px;
+}
+
+.ktms-login-field label {
+  color: var(--ktms-text);
+
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.ktms-login-input-wrap {
+  position: relative;
+
+  display: flex;
+  align-items: center;
+}
+
+.ktms-input-icon {
+  position: absolute;
+  left: 13px;
+
+  color: var(--ktms-text-muted);
+
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 13px;
+  font-weight: 700;
+
+  pointer-events: none;
+}
+
+.ktms-login-field input {
+  width: 100%;
+  height: 48px;
+
+  padding: 0 13px 0 37px;
+
+  border: 1px solid var(--ktms-border);
+  border-radius: 8px;
+
+  outline: none;
+
+  background: #0D1118;
+  color: var(--ktms-text);
+
+  font-size: 13px;
+
+  transition:
+    border-color 160ms ease,
+    box-shadow 160ms ease,
+    background 160ms ease;
+}
+
+.ktms-login-field input::placeholder {
+  color: #596474;
+}
+
+.ktms-login-field input:hover {
+  border-color: var(--ktms-border-strong);
+}
+
+.ktms-login-field input:focus {
+  border-color: var(--ktms-primary);
+
+  background: #0F141C;
+
+  box-shadow:
+    0 0 0 3px var(--ktms-primary-soft),
+    0 0 22px rgba(0, 217, 255, 0.045);
+}
+
+
+/* ---------------------------------------------------------
+   PRIMARY LOGIN BUTTON
+   --------------------------------------------------------- */
+
+.ktms-login-primary {
+  width: 100%;
+  min-height: 48px;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+
+  padding: 0 15px;
+
+  border: 1px solid var(--ktms-primary);
+  border-radius: 8px;
+
+  background: var(--ktms-primary);
+  color: #080A0F;
+
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.07em;
+
+  transition:
+    transform 160ms ease,
+    box-shadow 160ms ease,
+    background 160ms ease;
+}
+
+.ktms-login-primary:hover {
+  transform: translateY(-1px);
+
+  background: #26DFFF;
+
+  box-shadow:
+    0 8px 24px rgba(0, 217, 255, 0.18);
+}
+
+.ktms-login-primary:active {
+  transform: translateY(0);
+}
+
+.ktms-login-button-arrow {
+  font-size: 18px;
+  line-height: 1;
+}
+
+
+/* ---------------------------------------------------------
+   SECONDARY LOGIN BUTTON
+   --------------------------------------------------------- */
+
+.ktms-login-secondary {
+  width: 100%;
+  min-height: 42px;
+
+  border: 1px solid var(--ktms-border);
+  border-radius: 8px;
+
+  background: transparent;
+  color: var(--ktms-text-muted);
+
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.07em;
+
+  transition:
+    border-color 160ms ease,
+    color 160ms ease,
+    background 160ms ease;
+}
+
+.ktms-login-secondary:hover {
+  border-color: var(--ktms-border-strong);
+
+  background: rgba(255, 255, 255, 0.02);
+
+  color: var(--ktms-text);
+}
+
+
+/* ---------------------------------------------------------
+   LOGIN FOOTER
+   --------------------------------------------------------- */
+
+.ktms-login-footer {
+  position: relative;
+  z-index: 1;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+
+  margin-top: 24px;
+  padding-top: 17px;
+
+  border-top: 1px solid var(--ktms-border);
+
+  color: #596474;
+
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: 0.11em;
+}
+
+.ktms-login-footer span:first-child {
+  color: var(--ktms-gold);
+}
+
+.ktms-login-footer-separator {
+  width: 3px;
+  height: 3px;
+
+  border-radius: 50%;
+
+  background: var(--ktms-border-strong);
+}
+
+
+/* ---------------------------------------------------------
+   LOGIN RESPONSIVE
+   --------------------------------------------------------- */
+
+@media (max-width: 820px) {
+
+  .ktms-login {
+    padding: 28px 20px;
+  }
+
+  .ktms-login-layout {
+    grid-template-columns: 1fr;
+
+    gap: 32px;
+
+    width: min(520px, 100%);
+  }
+
+  .ktms-login-identity {
+    max-width: none;
+
+    text-align: center;
+  }
+
+  .ktms-login-mark {
+    justify-content: center;
+
+    margin-bottom: 20px;
+  }
+
+  .ktms-login-eyebrow {
+    margin-bottom: 12px;
+  }
+
+  .ktms-login-identity h1 {
+    font-size: clamp(34px, 9vw, 48px);
+  }
+
+  .ktms-login-intro {
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  .ktms-login-authority {
+    margin-top: 22px;
+  }
+
+}
+
+
+@media (max-width: 480px) {
+
+  .ktms-login {
+    align-items: flex-start;
+
+    padding:
+      30px
+      16px
+      24px;
+  }
+
+  .ktms-login-layout {
+    gap: 26px;
+  }
+
+  .ktms-login-identity h1 {
+    font-size: 34px;
+  }
+
+  .ktms-login-intro {
+    font-size: 13px;
+  }
+
+  .ktms-login-card {
+    padding: 23px 20px;
+
+    border-radius: 14px;
+  }
+
+  .ktms-login-card h2 {
+    font-size: 22px;
+  }
+
+  .ktms-login-orbit-one {
+    width: 420px;
+    height: 420px;
+
+    top: -230px;
+    right: -220px;
+  }
+
+  .ktms-login-orbit-two {
+    width: 300px;
+    height: 300px;
+
+    bottom: -180px;
+    left: -170px;
+  }
+
+}
