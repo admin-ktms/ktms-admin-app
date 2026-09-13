@@ -177,7 +177,11 @@ const registrationsSection = document.getElementById(
 
 if (!summary) return;
 
-summary.innerHTML = "<div class="ktms-loading-state"> Loading registrations... </div>";
+summary.innerHTML = `
+  <div class="ktms-loading-state">
+    Loading registrations...
+  </div>
+`;
 
 if (requestsSection) {
 requestsSection.innerHTML = "";
