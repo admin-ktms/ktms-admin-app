@@ -1,5 +1,4 @@
 import { adminApi } from "../../api/admin-api.js";
-import "../../styles/players.css";
 
 const playerState = {
   data: null,
