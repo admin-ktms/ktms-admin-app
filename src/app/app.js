@@ -133,6 +133,11 @@ export async function renderRoute(page, route, admin) {
   return;
 }
 
+  if (route === "players") {
+  await renderPlayers(content);
+  return;
+}
+
   content.innerHTML = `
     <div class="ktms-empty-state">
       <h2>${titles[route] || "Module"}</h2>
