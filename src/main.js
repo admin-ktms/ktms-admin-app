@@ -22,64 +22,156 @@ if (!app) {
 function renderLogin() {
   app.innerHTML = `
     <main class="ktms-login">
-      <section class="ktms-login-card">
+      <div class="ktms-login-orbit ktms-login-orbit-one"></div>
+      <div class="ktms-login-orbit ktms-login-orbit-two"></div>
 
-        <div class="ktms-brand">
-          <div class="ktms-brand-title">KTMS</div>
-          <div class="ktms-brand-subtitle">Tournament Management System</div>
+      <section class="ktms-login-layout">
+
+        <div class="ktms-login-identity">
+
+          <div class="ktms-login-mark">
+            <span class="ktms-login-mark-line"></span>
+            <span>KTMS</span>
+          </div>
+
+          <div class="ktms-login-eyebrow">
+            ADMINISTRATION CONSOLE
+          </div>
+
+          <h1>
+            Tournament<br>
+            <span>Command Center</span>
+          </h1>
+
+          <p class="ktms-login-intro">
+            Secure administrative access to the KickOff Tournament
+            Management System.
+          </p>
+
+          <div class="ktms-login-authority">
+            <div class="ktms-login-authority-indicator"></div>
+
+            <div>
+              <strong>Protected Operations</strong>
+              <span>Core-authoritative administration</span>
+            </div>
+          </div>
+
         </div>
 
-        <h1>Admin Login</h1>
+        <section class="ktms-login-card">
 
-        <p id="login-description">
-          Enter your administrator email to receive a verification code.
-        </p>
+          <div class="ktms-login-card-header">
 
-        <div id="login-msg" class="ktms-message"></div>
+            <div class="ktms-login-card-icon">
+              <span></span>
+              <span></span>
+              <span></span>
+            </div>
 
-        <form id="email-form">
+            <div>
+              <div class="ktms-login-card-kicker">
+                KTMS ADMIN
+              </div>
 
-          <label for="email">Administrator Email</label>
+              <h2>Sign in</h2>
+            </div>
 
-          <input
-            id="email"
-            type="email"
-            autocomplete="email"
-            required
-          />
+          </div>
 
-          <button id="send-code" type="submit">
-            SEND VERIFICATION CODE
-          </button>
+          <p class="ktms-login-description" id="login-description">
+            Enter your administrator email to receive a verification code.
+          </p>
 
-        </form>
+          <div class="ktms-login-security">
+            <span class="ktms-security-dot"></span>
+            <span>SECURE EMAIL VERIFICATION</span>
+          </div>
 
-        <form id="otp-form" hidden>
+          <div id="login-msg" class="ktms-message" aria-live="polite"></div>
 
-          <label for="otp">Verification Code</label>
+          <form id="email-form" class="ktms-login-form">
 
-          <input
-            id="otp"
-            type="text"
-            inputmode="numeric"
-            autocomplete="one-time-code"
-            maxlength="8"
-            required
-          />
+            <div class="ktms-login-field">
 
-          <button type="submit">
-            VERIFY CODE
-          </button>
+              <label for="email">
+                Administrator Email
+              </label>
 
-          <button
-            id="back-to-email"
-            type="button"
-            class="secondary-button"
-          >
-            CHANGE EMAIL
-          </button>
+              <div class="ktms-login-input-wrap">
+                <span class="ktms-input-icon">@</span>
 
-        </form>
+                <input
+                  id="email"
+                  type="email"
+                  autocomplete="email"
+                  placeholder="administrator@example.com"
+                  required
+                />
+              </div>
+
+            </div>
+
+            <button
+              id="send-code"
+              type="submit"
+              class="ktms-login-primary"
+            >
+              <span>CONTINUE</span>
+              <span class="ktms-login-button-arrow">→</span>
+            </button>
+
+          </form>
+
+          <form id="otp-form" class="ktms-login-form" hidden>
+
+            <div class="ktms-login-field">
+
+              <label for="otp">
+                Verification Code
+              </label>
+
+              <div class="ktms-login-input-wrap">
+                <span class="ktms-input-icon">#</span>
+
+                <input
+                  id="otp"
+                  type="text"
+                  inputmode="numeric"
+                  autocomplete="one-time-code"
+                  maxlength="8"
+                  placeholder="Enter verification code"
+                  required
+                />
+              </div>
+
+            </div>
+
+            <button
+              type="submit"
+              class="ktms-login-primary"
+            >
+              <span>VERIFY & ENTER</span>
+              <span class="ktms-login-button-arrow">→</span>
+            </button>
+
+            <button
+              id="back-to-email"
+              type="button"
+              class="ktms-login-secondary"
+            >
+              CHANGE EMAIL
+            </button>
+
+          </form>
+
+          <div class="ktms-login-footer">
+            <span>KTMS</span>
+            <span class="ktms-login-footer-separator"></span>
+            <span>AUTHORIZED ACCESS ONLY</span>
+          </div>
+
+        </section>
 
       </section>
     </main>
