@@ -3,6 +3,7 @@ import { navigate } from "./router.js";
 import { renderTournaments } from "../modules/tournaments/tournaments.js";
 import { renderDashboard } from "../modules/dashboard/dashboard.js";
 import { renderRegistrations } from "../modules/registrations/registrations.js";
+import { renderPlayers } from "../modules/players/players.js";
 
 const navigation = [
   ["dashboard", "Dashboard", "/dashboard"],
