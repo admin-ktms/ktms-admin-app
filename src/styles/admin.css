@@ -3838,3 +3838,105 @@ a:hover {
   opacity: 0.6;
   cursor: wait;
 }
+
+/* =========================================================
+   PAYMENT VIEW SWITCHER
+   ========================================================= */
+
+.ktms-payment-view-switcher {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid var(--ktms-border);
+  border-radius: 8px;
+  background: var(--ktms-surface);
+}
+
+.ktms-payment-view-tab {
+  min-height: 38px;
+  padding: 8px 13px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--ktms-text-muted);
+  font: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+}
+
+.ktms-payment-view-tab:hover {
+  color: var(--ktms-text);
+}
+
+.ktms-payment-view-tab.is-active {
+  border-color: var(--ktms-border);
+  background: var(--ktms-bg);
+  color: var(--ktms-primary);
+}
+
+/* =========================================================
+   SELECTED TOURNAMENT
+   ========================================================= */
+
+.ktms-payment-selected-tournament {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 18px;
+  padding: 14px 16px;
+  border: 1px solid rgba(0, 217, 255, 0.2);
+  border-radius: 9px;
+  background: rgba(0, 217, 255, 0.025);
+}
+
+.ktms-payment-selected-tournament strong {
+  display: block;
+  color: var(--ktms-primary);
+  font-size: 14px;
+}
+
+.ktms-payment-selected-tournament span {
+  display: block;
+  margin-top: 3px;
+  color: var(--ktms-text-muted);
+  font-size: 12px;
+}
+
+/* =========================================================
+   FINANCIAL AUDIT
+   ========================================================= */
+
+.ktms-payment-audit-warning {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 18px;
+  padding: 14px 16px;
+  border: 1px solid rgba(255, 200, 87, 0.25);
+  border-radius: 9px;
+  background: rgba(255, 200, 87, 0.035);
+}
+
+.ktms-payment-audit-warning strong {
+  color: var(--ktms-gold);
+  font-size: 12px;
+}
+
+.ktms-payment-audit-warning span {
+  color: var(--ktms-text-muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.ktms-payment-audit-count {
+  margin: 12px 0;
+  color: var(--ktms-text-muted);
+  font-size: 12px;
+}
+
+.ktms-payment-audit-count strong {
+  color: var(--ktms-primary);
+}
