@@ -254,22 +254,70 @@ async function authenticate() {
   try {
     const admin = await getAdminIdentity();
 
-    renderAdminShell(admin);
+    await renderAdminShell(admin);
+  } catch (error) {
+    console.error(
+      "KTMS administrator authentication failed:",
+      error
+    );
 
-    } catch (error) {
-      console.error("KTMS administrator authentication failed:", error);
-    
-      const message = document.getElementById("login-msg");
-    
-      if (message) {
-        message.textContent =
-          `ADMIN AUTHENTICATION FAILED: ${error?.code || "UNKNOWN_ERROR"} — ${error?.message || "Unknown error"}`;
+    /*
+     * A valid Supabase session without a valid
+     * KTMS administrator session must establish
+     * a fresh KTMS session before retrying.
+     */
+    if (
+      error?.code === "KTMS_SESSION_REQUIRED" ||
+      error?.code === "SESSION_EXPIRED" ||
+      error?.code === "SESSION_REJECTED" ||
+      error?.code === "ADMIN_SESSION_REQUIRED"
+    ) {
+      try {
+        await startAdminSession();
+
+        const admin =
+          await getAdminIdentity();
+
+        await renderAdminShell(admin);
+
+        return;
+      } catch (retryError) {
+        console.error(
+          "KTMS administrator session recovery failed:",
+          retryError
+        );
+
+        const message =
+          document.getElementById("login-msg");
+
+        if (message) {
+          message.textContent =
+            `ADMIN AUTHENTICATION FAILED: ${
+              retryError?.code || "UNKNOWN_ERROR"
+            } — ${
+              retryError?.message ||
+              "Unable to establish administrator session."
+            }`;
+        }
+
+        return;
       }
-    
-      return;
     }
-}
 
+    const message =
+      document.getElementById("login-msg");
+
+    if (message) {
+      message.textContent =
+        `ADMIN AUTHENTICATION FAILED: ${
+          error?.code || "UNKNOWN_ERROR"
+        } — ${
+          error?.message ||
+          "Unknown error"
+        }`;
+    }
+  }
+}
 async function renderAdminShell(admin) {
   const route = getCurrentRoute();
 
