@@ -3291,3 +3291,508 @@ a:hover {
     width: 100%;
   }
 }
+
+/* =========================================================
+   KTMS PAYMENTS MODULE
+   ========================================================= */
+
+.ktms-payment-module {
+  width: 100%;
+}
+
+/* ---------------------------------------------------------
+   Module Sections
+   --------------------------------------------------------- */
+
+.ktms-section {
+  margin-top: 20px;
+}
+
+.ktms-section:first-child {
+  margin-top: 0;
+}
+
+.ktms-section-header {
+  margin-bottom: 14px;
+}
+
+.ktms-section-title {
+  margin: 0;
+  color: var(--ktms-text);
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.ktms-section-subtitle {
+  margin: 5px 0 0;
+  color: var(--ktms-text-muted);
+  font-size: 13px;
+}
+
+/* ---------------------------------------------------------
+   Messages / Loading / Empty States
+   --------------------------------------------------------- */
+
+.ktms-message {
+  display: none;
+  margin: 0 0 16px;
+  padding: 11px 14px;
+  border: 1px solid var(--ktms-border);
+  border-radius: 8px;
+  background: var(--ktms-surface);
+  color: var(--ktms-text);
+  font-size: 13px;
+}
+
+.ktms-message.is-visible {
+  display: block;
+}
+
+.ktms-loading-state,
+.ktms-error-state,
+.ktms-empty-state {
+  padding: 28px 20px;
+  text-align: center;
+  border: 1px solid var(--ktms-border);
+  border-radius: 10px;
+  background: var(--ktms-surface);
+  color: var(--ktms-text-muted);
+  font-size: 13px;
+}
+
+.ktms-error-state {
+  color: var(--ktms-gold);
+}
+
+.ktms-empty-state strong {
+  display: block;
+  margin-bottom: 5px;
+  color: var(--ktms-text);
+}
+
+/* ---------------------------------------------------------
+   Payment Summary
+   --------------------------------------------------------- */
+
+.ktms-payment-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.ktms-payment-stat {
+  min-width: 0;
+  padding: 16px;
+  border: 1px solid var(--ktms-border);
+  border-radius: 10px;
+  background: var(--ktms-surface);
+}
+
+.ktms-payment-stat-label {
+  margin-bottom: 8px;
+  color: var(--ktms-text-muted);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.ktms-payment-stat-value {
+  overflow: hidden;
+  color: var(--ktms-text);
+  font-size: 21px;
+  font-weight: 700;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ktms-payment-stat-success {
+  border-color: rgba(0, 217, 255, 0.25);
+}
+
+.ktms-payment-stat-success .ktms-payment-stat-value {
+  color: var(--ktms-primary);
+}
+
+.ktms-payment-stat-pending {
+  border-color: rgba(255, 200, 87, 0.25);
+}
+
+.ktms-payment-stat-pending .ktms-payment-stat-value {
+  color: var(--ktms-gold);
+}
+
+.ktms-payment-stat-failed {
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+.ktms-payment-stat-refunded {
+  border-color: rgba(139, 149, 165, 0.25);
+}
+
+.ktms-payment-stat-neutral .ktms-payment-stat-value {
+  color: var(--ktms-text);
+}
+
+/* ---------------------------------------------------------
+   Payment Filters
+   --------------------------------------------------------- */
+
+.ktms-payment-filters {
+  display: grid;
+  grid-template-columns:
+    minmax(180px, 1.6fr)
+    minmax(150px, 1fr)
+    minmax(140px, 1fr)
+    minmax(140px, 1fr)
+    minmax(150px, 1fr)
+    minmax(150px, 1fr)
+    auto;
+  gap: 10px;
+  align-items: end;
+}
+
+.ktms-payment-filter {
+  min-width: 0;
+}
+
+.ktms-payment-filter label {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--ktms-text-muted);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.ktms-payment-filter input,
+.ktms-payment-filter select {
+  width: 100%;
+  min-height: 40px;
+  padding: 9px 11px;
+  border: 1px solid var(--ktms-border);
+  border-radius: 7px;
+  outline: none;
+  background: var(--ktms-input, #11151D);
+  color: var(--ktms-text);
+  font: inherit;
+  font-size: 13px;
+  box-sizing: border-box;
+}
+
+.ktms-payment-filter input::placeholder {
+  color: var(--ktms-text-muted);
+}
+
+.ktms-payment-filter input:focus,
+.ktms-payment-filter select:focus {
+  border-color: var(--ktms-primary);
+  box-shadow: 0 0 0 2px rgba(0, 217, 255, 0.08);
+}
+
+.ktms-payment-filter-action {
+  display: flex;
+  align-items: flex-end;
+}
+
+/* ---------------------------------------------------------
+   Payment Table
+   --------------------------------------------------------- */
+
+.ktms-table-wrap {
+  width: 100%;
+  overflow-x: auto;
+  border: 1px solid var(--ktms-border);
+  border-radius: 10px;
+  background: var(--ktms-surface);
+}
+
+.ktms-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 900px;
+}
+
+.ktms-table th {
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--ktms-border);
+  background: rgba(255, 255, 255, 0.015);
+  color: var(--ktms-text-muted);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-align: left;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.ktms-table td {
+  padding: 13px 14px;
+  border-bottom: 1px solid var(--ktms-border);
+  color: var(--ktms-text);
+  font-size: 13px;
+  vertical-align: middle;
+}
+
+.ktms-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.ktms-table tbody tr {
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.ktms-table tbody tr:hover {
+  background: rgba(0, 217, 255, 0.025);
+}
+
+.ktms-payment-table td:nth-child(4) {
+  white-space: nowrap;
+  font-weight: 600;
+}
+
+/* ---------------------------------------------------------
+   Payment Table Content
+   --------------------------------------------------------- */
+
+.ktms-payment-reference {
+  color: var(--ktms-primary);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.ktms-payment-provider {
+  color: var(--ktms-text);
+  font-size: 12px;
+}
+
+.ktms-payment-secondary-text {
+  display: block;
+  margin-top: 3px;
+  color: var(--ktms-text-muted);
+  font-size: 11px;
+}
+
+.ktms-payment-table .ktms-status {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+/* ---------------------------------------------------------
+   Payment Detail
+   --------------------------------------------------------- */
+
+.ktms-payment-detail-section {
+  margin-top: 20px;
+  padding: 20px;
+  border: 1px solid var(--ktms-border);
+  border-radius: 10px;
+  background: var(--ktms-surface);
+}
+
+.ktms-payment-detail-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+  margin-bottom: 20px;
+}
+
+.ktms-payment-detail-eyebrow {
+  margin-bottom: 5px;
+  color: var(--ktms-primary);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.ktms-payment-detail-header h3 {
+  margin: 0;
+  color: var(--ktms-text);
+  font-size: 18px;
+  line-height: 1.3;
+}
+
+.ktms-payment-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1px;
+  overflow: hidden;
+  border: 1px solid var(--ktms-border);
+  border-radius: 8px;
+  background: var(--ktms-border);
+}
+
+.ktms-payment-detail-item {
+  min-width: 0;
+  padding: 13px 14px;
+  background: var(--ktms-surface);
+}
+
+.ktms-payment-detail-item-label {
+  margin-bottom: 5px;
+  color: var(--ktms-text-muted);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.ktms-payment-detail-item-value {
+  overflow-wrap: anywhere;
+  color: var(--ktms-text);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+/* ---------------------------------------------------------
+   Payment Notes / Proof
+   --------------------------------------------------------- */
+
+.ktms-payment-detail-note {
+  margin-top: 16px;
+  padding: 13px 14px;
+  border: 1px solid var(--ktms-border);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.015);
+}
+
+.ktms-payment-detail-note-label {
+  margin-bottom: 6px;
+  color: var(--ktms-text-muted);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.ktms-payment-detail-note-content {
+  color: var(--ktms-text);
+  font-size: 13px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.ktms-payment-proof {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  color: var(--ktms-primary);
+  font-size: 12px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.ktms-payment-proof:hover {
+  text-decoration: underline;
+}
+
+/* ---------------------------------------------------------
+   Bank Verification Panel
+   --------------------------------------------------------- */
+
+.ktms-payment-verification-panel {
+  margin-top: 18px;
+  padding: 16px;
+  border: 1px solid rgba(255, 200, 87, 0.35);
+  border-radius: 9px;
+  background: rgba(255, 200, 87, 0.035);
+}
+
+.ktms-payment-verification-panel h4 {
+  margin: 0 0 6px;
+  color: var(--ktms-gold);
+  font-size: 14px;
+}
+
+.ktms-payment-verification-panel p {
+  margin: 0;
+  color: var(--ktms-text-muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.ktms-payment-verification-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+/* ---------------------------------------------------------
+   Responsive
+   --------------------------------------------------------- */
+
+@media (max-width: 1250px) {
+  .ktms-payment-summary-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .ktms-payment-filters {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .ktms-payment-filter-action {
+    align-items: center;
+  }
+}
+
+@media (max-width: 800px) {
+  .ktms-payment-summary-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .ktms-payment-filters {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .ktms-payment-detail-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .ktms-payment-detail-header {
+    flex-direction: column;
+  }
+}
+
+@media (max-width: 560px) {
+  .ktms-payment-summary-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .ktms-payment-filters {
+    grid-template-columns: 1fr;
+  }
+
+  .ktms-payment-detail-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .ktms-payment-detail-section {
+    padding: 14px;
+  }
+
+  .ktms-payment-verification-actions {
+    flex-direction: column;
+  }
+
+  .ktms-payment-verification-actions button {
+    width: 100%;
+  }
+}
