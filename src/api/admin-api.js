@@ -3,12 +3,8 @@ import { CONFIG } from "../config.js";
 
 const ADMIN_SESSION_KEY = "ktms_admin_session";
 
-function getAdminSessionToken() {
-  return sessionStorage.getItem(ADMIN_SESSION_KEY) || "";
-}
-
 export function getStoredAdminSessionToken() {
-  return getAdminSessionToken();
+  return sessionStorage.getItem(ADMIN_SESSION_KEY) || "";
 }
 
 export function storeAdminSessionToken(token) {
@@ -17,22 +13,14 @@ export function storeAdminSessionToken(token) {
     return;
   }
 
-  sessionStorage.setItem(
-    ADMIN_SESSION_KEY,
-    token
-  );
+  sessionStorage.setItem(ADMIN_SESSION_KEY, token);
 }
 
 export function clearAdminSessionToken() {
-  sessionStorage.removeItem(
-    ADMIN_SESSION_KEY
-  );
+  sessionStorage.removeItem(ADMIN_SESSION_KEY);
 }
 
-export async function adminApi(
-  action,
-  payload = {}
-) {
+export async function adminApi(action, payload = {}) {
   const {
     data: { session },
     error: sessionError
@@ -48,51 +36,29 @@ export async function adminApi(
     );
   }
 
-  const adminSessionToken =
-  sessionStorage.getItem("ktms_admin_session");
-
-const headers = {
-  "Content-Type": "application/json",
-  "Authorization": `Bearer ${session.access_token}`
-};
-
-if (action !== "admin.session.start") {
-  if (!adminSessionToken) {
-    throw new Error(
-      "KTMS administrator session is missing."
-    );
-  }
-
-  headers["X-KTMS-Admin-Session"] =
-    adminSessionToken;
-}
-
-const response = await fetch(
-  CONFIG.ADMIN_API_URL,
-  {
-    method: "POST",
-    headers,
-    body: JSON.stringify({
-      action,
-      ...payload
-    })
-  }
-);
+  const headers = {
+    "Content-Type": "application/json",
+    "Authorization": `Bearer ${session.access_token}`
+  };
 
   /*
-   * admin.session.start is the one admin API action
-   * that creates the KTMS application session.
-   *
-   * It must NOT send an existing KTMS session header.
+   * admin.session.start creates the KTMS application
+   * session, so it must not require an existing
+   * X-KTMS-Admin-Session header.
    */
   if (action !== "admin.session.start") {
     const adminSessionToken =
-      getAdminSessionToken();
+      getStoredAdminSessionToken();
 
     if (!adminSessionToken) {
-      throw new Error(
+      const error = new Error(
         "KTMS administrator session is missing."
       );
+
+      error.code = "KTMS_SESSION_REQUIRED";
+      error.status = 401;
+
+      throw error;
     }
 
     headers["X-KTMS-Admin-Session"] =
@@ -135,19 +101,14 @@ const response = await fetch(
     error.status = response.status;
 
     /*
-     * If the server says the KTMS session is no
-     * longer valid, remove the browser copy so that
-     * the next login creates a fresh one.
+     * Remove the browser-side KTMS session when
+     * the backend says it is no longer valid.
      */
     if (
-      result?.error?.code ===
-        "SESSION_EXPIRED" ||
-      result?.error?.code ===
-        "SESSION_REJECTED" ||
-      result?.error?.code ===
-        "KTMS_SESSION_REQUIRED" ||
-      result?.error?.code ===
-        "ADMIN_SESSION_REQUIRED"
+      result?.error?.code === "SESSION_EXPIRED" ||
+      result?.error?.code === "SESSION_REJECTED" ||
+      result?.error?.code === "KTMS_SESSION_REQUIRED" ||
+      result?.error?.code === "ADMIN_SESSION_REQUIRED"
     ) {
       clearAdminSessionToken();
     }
