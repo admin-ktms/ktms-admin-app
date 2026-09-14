@@ -7,6 +7,7 @@ import { renderPlayers } from "../modules/players/players.js";
 import { renderPayments } from "../modules/payments/payments.js";
 import { renderMatchdays } from "../modules/matchdays/matchdays.js";
 import { renderFixtures } from "../modules/fixtures/fixtures.js";
+import { renderResults } from "../modules/results/results.js";
 
 const navigation = [
   ["dashboard", "Dashboard", "/dashboard"],
@@ -151,6 +152,10 @@ export async function renderRoute(page, route, admin) {
 
   if (route === "fixtures") {
   return renderFixtures(content);
+}
+
+  if (route === "results") {
+  return renderResults(content);
 }
 
   content.innerHTML = `
