@@ -406,18 +406,65 @@ async function loadMatchdays() {
     }
   );
 
-  state.matchdays =
-    extractArray(data, [
-      "matchdays",
-      "data"
-    ]).sort(
+  const rows = extractArray(data, [
+    "matchdays",
+    "data"
+  ]);
+
+  state.matchdays = rows
+    .map((matchday) => ({
+      matchdayId:
+        matchday.matchdayId ??
+        matchday.matchday_id ??
+        "",
+
+      tournamentId:
+        matchday.tournamentId ??
+        matchday.tournament_id ??
+        "",
+
+      matchdayNumber:
+        matchday.matchdayNumber ??
+        matchday.matchday_number ??
+        null,
+
+      matchdayName:
+        matchday.matchdayName ??
+        matchday.matchday_name ??
+        "",
+
+      matchdayDate:
+        matchday.matchdayDate ??
+        matchday.matchday_date ??
+        null,
+
+      startTime:
+        matchday.startTime ??
+        matchday.start_time ??
+        null,
+
+      endTime:
+        matchday.endTime ??
+        matchday.end_time ??
+        null,
+
+      stage:
+        matchday.stage ??
+        "",
+
+      matchdayStatus:
+        matchday.matchdayStatus ??
+        matchday.matchday_status ??
+        ""
+    }))
+    .filter(
+      (matchday) =>
+        matchday.matchdayId
+    )
+    .sort(
       (a, b) =>
-        Number(
-          a.matchday_number || 0
-        ) -
-        Number(
-          b.matchday_number || 0
-        )
+        Number(a.matchdayNumber || 0) -
+        Number(b.matchdayNumber || 0)
     );
 }
 
