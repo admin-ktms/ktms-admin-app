@@ -4,6 +4,7 @@ import { renderTournaments } from "../modules/tournaments/tournaments.js";
 import { renderDashboard } from "../modules/dashboard/dashboard.js";
 import { renderRegistrations } from "../modules/registrations/registrations.js";
 import { renderPlayers } from "../modules/players/players.js";
+import { renderPayments } from "../modules/payments/payments.js";
 
 const navigation = [
   ["dashboard", "Dashboard", "/dashboard"],
@@ -136,6 +137,10 @@ export async function renderRoute(page, route, admin) {
   if (route === "players") {
   await renderPlayers(content);
   return;
+}
+
+  if (route === "payments") {
+  return renderPayments(content);
 }
 
   content.innerHTML = `
