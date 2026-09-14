@@ -3940,3 +3940,520 @@ a:hover {
 .ktms-payment-audit-count strong {
   color: var(--ktms-primary);
 }
+/* =========================================================
+   MATCHDAY MODULE
+   ========================================================= */
+
+.ktms-matchday-module {
+  width: 100%;
+}
+
+/* =========================================================
+   TOURNAMENT SELECTOR
+   ========================================================= */
+
+.ktms-matchday-tournament-selector {
+  display: grid;
+  gap: 8px;
+  max-width: 620px;
+}
+
+.ktms-matchday-tournament-selector label {
+  color: var(--ktms-text);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.ktms-matchday-tournament-selector select {
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 12px;
+
+  border: 1px solid var(--ktms-border);
+  border-radius: var(--ktms-radius-sm);
+
+  background: var(--ktms-surface);
+  color: var(--ktms-text);
+
+  outline: none;
+}
+
+.ktms-matchday-tournament-selector select:focus {
+  border-color: var(--ktms-primary);
+  box-shadow:
+    0 0 0 3px var(--ktms-primary-soft);
+}
+
+/* =========================================================
+   SELECTED TOURNAMENT
+   ========================================================= */
+
+.ktms-matchday-selected-tournament {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+
+  padding: 18px;
+
+  border: 1px solid var(--ktms-primary-border);
+  border-radius: var(--ktms-radius-md);
+
+  background: var(--ktms-primary-soft);
+}
+
+.ktms-matchday-selected-tournament strong {
+  display: block;
+
+  margin-top: 4px;
+
+  color: var(--ktms-primary);
+
+  font-size: 16px;
+  font-weight: 800;
+}
+
+.ktms-matchday-selected-tournament span {
+  display: block;
+
+  margin-top: 3px;
+
+  color: var(--ktms-text-muted);
+
+  font-size: 12px;
+}
+
+.ktms-matchday-eyebrow {
+  color: var(--ktms-text-muted);
+
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+
+/* =========================================================
+   PROGRESS
+   ========================================================= */
+
+.ktms-matchday-progress {
+  display: grid;
+  gap: 2px;
+
+  min-width: 120px;
+
+  text-align: right;
+}
+
+.ktms-matchday-progress strong {
+  color: var(--ktms-text);
+
+  font-size: 20px;
+}
+
+.ktms-matchday-progress span {
+  color: var(--ktms-text-muted);
+
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+}
+
+/* =========================================================
+   SUMMARY
+   ========================================================= */
+
+.ktms-matchday-summary-grid {
+  display: grid;
+  grid-template-columns:
+    repeat(4, minmax(0, 1fr));
+
+  gap: 14px;
+
+  margin: 18px 0 24px;
+}
+
+.ktms-matchday-summary-card {
+  min-height: 125px;
+  padding: 18px;
+
+  border: 1px solid var(--ktms-border);
+  border-radius: var(--ktms-radius-md);
+
+  background: var(--ktms-surface);
+
+  box-shadow: var(--ktms-shadow-sm);
+}
+
+.ktms-matchday-summary-card > span {
+  display: block;
+
+  color: var(--ktms-text-muted);
+
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+}
+
+.ktms-matchday-summary-card > strong {
+  display: block;
+
+  margin-top: 10px;
+
+  color: var(--ktms-text);
+
+  font-size: 20px;
+}
+
+.ktms-matchday-summary-card > small {
+  display: block;
+
+  margin-top: 5px;
+
+  color: var(--ktms-text-muted);
+
+  font-size: 11px;
+}
+
+.ktms-matchday-summary-active {
+  border-color: var(--ktms-primary-border);
+}
+
+.ktms-matchday-summary-active > strong {
+  color: var(--ktms-primary);
+}
+
+.ktms-matchday-summary-completed {
+  border-color: var(--ktms-gold-border);
+}
+
+.ktms-matchday-summary-completed > strong {
+  color: var(--ktms-gold);
+}
+
+.ktms-matchday-summary-scheduled {
+  border-color: var(--ktms-border-strong);
+}
+
+/* =========================================================
+   MATCHDAY GRID
+   ========================================================= */
+
+.ktms-matchday-grid {
+  display: grid;
+
+  grid-template-columns:
+    repeat(
+      auto-fill,
+      minmax(300px, 1fr)
+    );
+
+  gap: 16px;
+}
+
+/* =========================================================
+   MATCHDAY CARD
+   ========================================================= */
+
+.ktms-matchday-card {
+  position: relative;
+
+  display: flex;
+  flex-direction: column;
+
+  min-height: 245px;
+  padding: 18px;
+
+  border: 1px solid var(--ktms-border);
+  border-radius: var(--ktms-radius-lg);
+
+  background:
+    linear-gradient(
+      145deg,
+      var(--ktms-surface-raised),
+      var(--ktms-surface)
+    );
+
+  box-shadow: var(--ktms-shadow-sm);
+
+  transition:
+    border-color 160ms ease,
+    transform 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.ktms-matchday-card:hover {
+  transform: translateY(-2px);
+
+  border-color:
+    var(--ktms-border-strong);
+
+  box-shadow:
+    var(--ktms-shadow-md);
+}
+
+.ktms-matchday-card-active {
+  border-color:
+    var(--ktms-primary-border);
+
+  box-shadow:
+    var(--ktms-shadow-primary);
+}
+
+.ktms-matchday-card-active::before {
+  content: "";
+
+  position: absolute;
+
+  top: 0;
+  left: 0;
+
+  width: 100%;
+  height: 2px;
+
+  background:
+    var(--ktms-primary);
+}
+
+/* =========================================================
+   CARD HEADER
+   ========================================================= */
+
+.ktms-matchday-card-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+
+  gap: 14px;
+}
+
+.ktms-matchday-number {
+  display: block;
+
+  margin-bottom: 6px;
+
+  color: var(--ktms-text-muted);
+
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+
+.ktms-matchday-card h3 {
+  margin: 0;
+
+  color: var(--ktms-text);
+
+  font-size: 17px;
+  font-weight: 750;
+}
+
+.ktms-matchday-card-stage {
+  margin-top: 10px;
+
+  color: var(--ktms-gold);
+
+  font-size: 11px;
+  font-weight: 700;
+}
+
+/* =========================================================
+   CARD META
+   ========================================================= */
+
+.ktms-matchday-card-meta {
+  display: grid;
+
+  grid-template-columns:
+    repeat(2, minmax(0, 1fr));
+
+  gap: 12px;
+
+  margin-top: 22px;
+}
+
+.ktms-matchday-card-meta > div {
+  min-width: 0;
+}
+
+.ktms-matchday-card-meta span {
+  display: block;
+
+  margin-bottom: 3px;
+
+  color: var(--ktms-text-muted);
+
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+}
+
+.ktms-matchday-card-meta strong {
+  color: var(--ktms-text);
+
+  font-size: 12px;
+}
+
+/* =========================================================
+   CARD FOOTER
+   ========================================================= */
+
+.ktms-matchday-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  gap: 10px;
+
+  margin-top: auto;
+  padding-top: 20px;
+}
+
+.ktms-matchday-completed-label {
+  color: var(--ktms-gold);
+
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+}
+
+/* =========================================================
+   DETAIL
+   ========================================================= */
+
+.ktms-matchday-detail {
+  padding: 22px;
+
+  border: 1px solid var(--ktms-border);
+  border-radius: var(--ktms-radius-lg);
+
+  background:
+    linear-gradient(
+      145deg,
+      var(--ktms-surface-raised),
+      var(--ktms-surface)
+    );
+}
+
+.ktms-matchday-detail-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+
+  gap: 20px;
+
+  padding-bottom: 18px;
+
+  border-bottom:
+    1px solid var(--ktms-border);
+}
+
+.ktms-matchday-detail-header h2 {
+  margin: 5px 0 0;
+
+  color: var(--ktms-text);
+
+  font-size: 22px;
+}
+
+.ktms-matchday-detail-header p {
+  margin: 4px 0 0;
+
+  color: var(--ktms-text-muted);
+
+  font-family:
+    ui-monospace,
+    SFMono-Regular,
+    Menlo,
+    monospace;
+
+  font-size: 11px;
+}
+
+.ktms-matchday-detail-grid {
+  display: grid;
+
+  grid-template-columns:
+    repeat(4, minmax(0, 1fr));
+
+  gap: 14px;
+
+  margin-top: 20px;
+}
+
+.ktms-matchday-detail-item {
+  min-width: 0;
+
+  padding: 13px;
+
+  border: 1px solid var(--ktms-border);
+  border-radius: var(--ktms-radius-sm);
+
+  background: var(--ktms-bg);
+}
+
+.ktms-matchday-detail-item span {
+  display: block;
+
+  margin-bottom: 5px;
+
+  color: var(--ktms-text-muted);
+
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.ktms-matchday-detail-item strong {
+  display: block;
+
+  color: var(--ktms-text);
+
+  font-size: 12px;
+
+  overflow-wrap: anywhere;
+}
+
+/* =========================================================
+   RESPONSIVE
+   ========================================================= */
+
+@media (max-width: 1100px) {
+  .ktms-matchday-summary-grid {
+    grid-template-columns:
+      repeat(2, minmax(0, 1fr));
+  }
+
+  .ktms-matchday-detail-grid {
+    grid-template-columns:
+      repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 700px) {
+  .ktms-matchday-selected-tournament {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .ktms-matchday-progress {
+    text-align: left;
+  }
+
+  .ktms-matchday-summary-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .ktms-matchday-detail-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .ktms-matchday-card-footer {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .ktms-matchday-card-footer button {
+    width: 100%;
+  }
+}
