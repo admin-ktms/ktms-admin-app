@@ -1,4 +1,5 @@
 import "./styles/admin.css";
+import { supabase } from "./lib/supabase.js";
 
 import {
   sendVerificationCode,
