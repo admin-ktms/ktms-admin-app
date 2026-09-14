@@ -662,7 +662,7 @@ function renderPlayerDossier(dossier) {
           class="ktms-player-dossier-section"
           hidden
         >
-          ${renderAdministration(access)}
+          ${renderAdministration(player, account, access)}
         </section>
 
       </div>
@@ -1551,8 +1551,102 @@ function renderAudit(audit) {
   );
 }
 
-function renderAdministration(access) {
+function renderAdministration(player, account, access) {
+  const playerId = firstValue(player, [
+    "playerId",
+    "player_id"
+  ]);
+
+  const playerStatus = firstValue(player, [
+    "playerStatus",
+    "player_status",
+    "status"
+  ]) || "Unknown";
+
+  const accountStatus = firstValue(account, [
+    "accountStatus",
+    "account_status"
+  ]) || "Unknown";
+
   const permissions = array(access.permissions);
+
+  const canManage = access.playerAdministration === true;
+
+  const normalizedPlayerStatus =
+    normalizeStatus(playerStatus);
+
+  const normalizedAccountStatus =
+    normalizeStatus(accountStatus);
+
+  const playerActions = [];
+
+  if (normalizedPlayerStatus === "active") {
+    playerActions.push({
+      action: "suspend",
+      label: "SUSPEND PLAYER",
+      tone: "warning"
+    });
+
+    playerActions.push({
+      action: "ban",
+      label: "BAN PLAYER",
+      tone: "danger"
+    });
+  }
+
+  if (normalizedPlayerStatus === "suspended") {
+    playerActions.push({
+      action: "reinstate",
+      label: "REINSTATE PLAYER",
+      tone: "success"
+    });
+
+    playerActions.push({
+      action: "ban",
+      label: "BAN PLAYER",
+      tone: "danger"
+    });
+  }
+
+  if (normalizedPlayerStatus === "banned") {
+    playerActions.push({
+      action: "reinstate",
+      label: "REINSTATE PLAYER",
+      tone: "success"
+    });
+  }
+
+  const accountActions = [];
+
+  if (normalizedAccountStatus === "active") {
+    accountActions.push({
+      action: "lock",
+      label: "LOCK ACCOUNT",
+      tone: "warning"
+    });
+
+    accountActions.push({
+      action: "disable",
+      label: "DISABLE ACCOUNT",
+      tone: "danger"
+    });
+  }
+
+  if (normalizedAccountStatus === "locked") {
+    accountActions.push({
+      action: "unlock",
+      label: "UNLOCK ACCOUNT",
+      tone: "success"
+    });
+  }
+
+  if (normalizedAccountStatus === "disabled") {
+    accountActions.push({
+      action: "reactivate",
+      label: "REACTIVATE ACCOUNT",
+      tone: "success"
+    });
+  }
 
   return `
     <div class="ktms-player-card ktms-player-card-wide ktms-player-admin-panel">
@@ -1561,13 +1655,13 @@ function renderAdministration(access) {
         <div>
           <h3>Administrative Actions</h3>
           <p>
-            Player state changes must be executed through KTMS Core
-            authorization and business rules.
+            Player and account state changes are executed through
+            KTMS Core authorization and business rules.
           </p>
         </div>
 
         ${
-          access.playerAdministration
+          canManage
             ? statusBadge("Authorized")
             : statusBadge("Read Only")
         }
@@ -1578,7 +1672,7 @@ function renderAdministration(access) {
         <div class="ktms-player-admin-capability">
           <span>Player Administration</span>
           <strong>
-            ${access.playerAdministration ? "AVAILABLE" : "READ ONLY"}
+            ${canManage ? "AVAILABLE" : "READ ONLY"}
           </strong>
         </div>
 
@@ -1604,6 +1698,125 @@ function renderAdministration(access) {
         </div>
 
       </div>
+
+      <div class="ktms-player-admin-state-grid">
+
+        <div class="ktms-player-admin-state">
+          <span>Player Status</span>
+          ${statusBadge(playerStatus)}
+        </div>
+
+        <div class="ktms-player-admin-state">
+          <span>Account Status</span>
+          ${statusBadge(accountStatus)}
+        </div>
+
+      </div>
+
+      ${
+        canManage
+          ? `
+            <div class="ktms-player-admin-actions">
+
+              <div class="ktms-player-admin-action-group">
+                <div class="ktms-player-card-heading">
+                  <div>
+                    <h3>Player Status</h3>
+                    <p>
+                      Changes the platform-level player status.
+                    </p>
+                  </div>
+                </div>
+
+                ${
+                  playerActions.length
+                    ? `
+                      <div class="ktms-player-action-buttons">
+                        ${playerActions
+                          .map(
+                            (item) => `
+                              <button
+                                type="button"
+                                class="ktms-player-admin-action ${
+                                  item.tone
+                                    ? `is-${item.tone}`
+                                    : ""
+                                }"
+                                data-player-platform-action="${escapeAttribute(
+                                  item.action
+                                )}"
+                              >
+                                ${escapeHtml(item.label)}
+                              </button>
+                            `
+                          )
+                          .join("")}
+                      </div>
+                    `
+                    : `
+                      <div class="ktms-player-empty">
+                        No player status actions are currently available.
+                      </div>
+                    `
+                }
+              </div>
+
+              <div class="ktms-player-admin-action-group">
+                <div class="ktms-player-card-heading">
+                  <div>
+                    <h3>Account Status</h3>
+                    <p>
+                      Controls access to the player's KTMS account.
+                    </p>
+                  </div>
+                </div>
+
+                ${
+                  accountActions.length
+                    ? `
+                      <div class="ktms-player-action-buttons">
+                        ${accountActions
+                          .map(
+                            (item) => `
+                              <button
+                                type="button"
+                                class="ktms-player-admin-action ${
+                                  item.tone
+                                    ? `is-${item.tone}`
+                                    : ""
+                                }"
+                                data-player-account-action="${escapeAttribute(
+                                  item.action
+                                )}"
+                              >
+                                ${escapeHtml(item.label)}
+                              </button>
+                            `
+                          )
+                          .join("")}
+                      </div>
+                    `
+                    : `
+                      <div class="ktms-player-empty">
+                        No account status actions are currently available.
+                      </div>
+                    `
+                }
+              </div>
+
+            </div>
+          `
+          : `
+            <div class="ktms-player-admin-notice">
+              <strong>Read-only administration</strong>
+              <p>
+                Your current administrator role does not have
+                PLAYER_MANAGE permission. No player mutation controls
+                are available.
+              </p>
+            </div>
+          `
+      }
 
       <div class="ktms-player-card-heading">
         <h3>Effective Permissions</h3>
@@ -1632,18 +1845,344 @@ function renderAdministration(access) {
       }
 
       <div class="ktms-player-admin-notice">
-        <strong>Core-controlled actions</strong>
+        <strong>Protected operation</strong>
         <p>
-          Account lock/unlock, disable/recovery, player suspension,
-          reinstatement, banning, identity correction, squad management,
-          tournament interventions and support interventions must only
-          be exposed here after their corresponding KTMS Core operation
-          and permission are verified.
+          Every mutation requires a confirmation and a mandatory
+          administrative reason. KTMS Core remains the final authority
+          for authorization, business rules, state changes and audit
+          logging.
         </p>
       </div>
 
     </div>
+
+    <div
+      id="player-admin-action-modal"
+      class="ktms-player-admin-modal"
+      hidden
+    >
+      <div class="ktms-player-admin-modal-backdrop"></div>
+
+      <div
+        class="ktms-player-admin-modal-dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="player-admin-modal-title"
+      >
+        <div class="ktms-player-card-heading">
+          <div>
+            <h3 id="player-admin-modal-title">
+              Confirm Administrative Action
+            </h3>
+
+            <p id="player-admin-modal-description"></p>
+          </div>
+        </div>
+
+        <div class="ktms-player-admin-modal-warning">
+          This action changes a live KTMS player/account state.
+          The operation will be recorded in the audit history.
+        </div>
+
+        <label
+          class="ktms-player-admin-reason"
+          for="player-admin-action-reason"
+        >
+          Reason
+        </label>
+
+        <textarea
+          id="player-admin-action-reason"
+          class="ktms-filter ktms-player-admin-reason-input"
+          rows="5"
+          maxlength="1000"
+          placeholder="Enter the administrative reason..."
+        ></textarea>
+
+        <div
+          id="player-admin-action-error"
+          class="ktms-message is-error"
+          hidden
+        ></div>
+
+        <div class="ktms-player-admin-modal-actions">
+
+          <button
+            type="button"
+            class="ktms-secondary-button"
+            id="cancel-player-admin-action"
+          >
+            CANCEL
+          </button>
+
+          <button
+            type="button"
+            class="ktms-player-admin-action is-danger"
+            id="confirm-player-admin-action"
+          >
+            CONFIRM ACTION
+          </button>
+
+        </div>
+      </div>
+    </div>
   `;
+  
+  bindPlayerAdministrationActions(playerId);
+}
+
+function bindPlayerAdministrationActions(playerId) {
+  document
+    .querySelectorAll("[data-player-platform-action]")
+    .forEach((button) => {
+      button.addEventListener("click", () => {
+        const action =
+          button.dataset.playerPlatformAction;
+
+        openPlayerAdminConfirmation({
+          type: "platform",
+          action,
+          playerId
+        });
+      });
+    });
+
+  document
+    .querySelectorAll("[data-player-account-action]")
+    .forEach((button) => {
+      button.addEventListener("click", () => {
+        const action =
+          button.dataset.playerAccountAction;
+
+        openPlayerAdminConfirmation({
+          type: "account",
+          action,
+          playerId
+        });
+      });
+    });
+
+  document
+    .getElementById("cancel-player-admin-action")
+    ?.addEventListener(
+      "click",
+      closePlayerAdminConfirmation
+    );
+
+  document
+    .querySelector(
+      "#player-admin-action-modal .ktms-player-admin-modal-backdrop"
+    )
+    ?.addEventListener(
+      "click",
+      closePlayerAdminConfirmation
+    );
+
+  document
+    .getElementById("confirm-player-admin-action")
+    ?.addEventListener(
+      "click",
+      executePlayerAdminAction
+    );
+}
+
+let pendingPlayerAdminAction = null;
+
+function openPlayerAdminConfirmation({
+  type,
+  action,
+  playerId
+}) {
+  const modal = document.getElementById(
+    "player-admin-action-modal"
+  );
+
+  const description = document.getElementById(
+    "player-admin-modal-description"
+  );
+
+  const reason = document.getElementById(
+    "player-admin-action-reason"
+  );
+
+  const error = document.getElementById(
+    "player-admin-action-error"
+  );
+
+  if (
+    !modal ||
+    !description ||
+    !reason
+  ) {
+    return;
+  }
+
+  pendingPlayerAdminAction = {
+    type,
+    action,
+    playerId
+  };
+
+  const actionLabel =
+    formatAdministrativeAction(action);
+
+  const target =
+    type === "platform"
+      ? "player"
+      : "account";
+
+  description.textContent =
+    `You are about to ${actionLabel.toLowerCase()} this ${target}.`;
+
+  reason.value = "";
+
+  if (error) {
+    error.hidden = true;
+    error.textContent = "";
+  }
+
+  modal.hidden = false;
+
+  requestAnimationFrame(() => {
+    reason.focus();
+  });
+}
+
+function closePlayerAdminConfirmation() {
+  const modal = document.getElementById(
+    "player-admin-action-modal"
+  );
+
+  if (modal) {
+    modal.hidden = true;
+  }
+
+  pendingPlayerAdminAction = null;
+}
+
+async function executePlayerAdminAction() {
+  const pending =
+    pendingPlayerAdminAction;
+
+  if (!pending) return;
+
+  const reasonElement =
+    document.getElementById(
+      "player-admin-action-reason"
+    );
+
+  const errorElement =
+    document.getElementById(
+      "player-admin-action-error"
+    );
+
+  const confirmButton =
+    document.getElementById(
+      "confirm-player-admin-action"
+    );
+
+  const reason =
+    reasonElement?.value.trim() || "";
+
+  if (!reason) {
+    if (errorElement) {
+      errorElement.textContent =
+        "An administrative reason is required.";
+      errorElement.hidden = false;
+    }
+
+    reasonElement?.focus();
+
+    return;
+  }
+
+  if (confirmButton) {
+    confirmButton.disabled = true;
+    confirmButton.textContent =
+      "PROCESSING...";
+  }
+
+  if (errorElement) {
+    errorElement.hidden = true;
+    errorElement.textContent = "";
+  }
+
+  try {
+    if (pending.type === "platform") {
+      await adminApi(
+        "player.platformAction",
+        {
+          playerId: pending.playerId,
+          playerAction: pending.action,
+          reason
+        }
+      );
+    } else {
+      await adminApi(
+        "player.accountAction",
+        {
+          playerId: pending.playerId,
+          accountAction: pending.action,
+          reason
+        }
+      );
+    }
+
+    closePlayerAdminConfirmation();
+
+    setMessage(
+      `${formatAdministrativeAction(
+        pending.action
+      )} completed successfully.`,
+      "success"
+    );
+
+    await openPlayerDetail(
+      pending.playerId
+    );
+
+    await loadPlayers();
+  } catch (error) {
+    console.error(
+      "KTMS player administration action failed:",
+      error
+    );
+
+    if (errorElement) {
+      errorElement.textContent =
+        error?.message ||
+        "Unable to complete the administrative action.";
+
+      errorElement.hidden = false;
+    }
+  } finally {
+    if (confirmButton) {
+      confirmButton.disabled = false;
+      confirmButton.textContent =
+        "CONFIRM ACTION";
+    }
+  }
+}
+
+function formatAdministrativeAction(action) {
+  const labels = {
+    suspend: "Suspend Player",
+    reinstate: "Reinstate Player",
+    ban: "Ban Player",
+    lock: "Lock Account",
+    unlock: "Unlock Account",
+    disable: "Disable Account",
+    reactivate: "Reactivate Account"
+  };
+
+  return (
+    labels[action] ||
+    String(action || "Perform Action")
+      .replace(/[_-]+/g, " ")
+      .replace(/\b\w/g, (character) =>
+        character.toUpperCase()
+      )
+  );
 }
 
 function sectionWithTable(title, rows, columns) {
