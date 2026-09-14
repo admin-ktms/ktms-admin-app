@@ -1,9 +1,9 @@
 import "./styles/admin.css";
 
-import { supabase } from "./lib/supabase.js";
 import {
   sendVerificationCode,
   verifyVerificationCode,
+  startAdminSession,
   getCurrentSession,
   getAdminIdentity,
   logout
@@ -214,11 +214,16 @@ function renderLogin() {
 
     try {
       await verifyVerificationCode(
-        emailInput.value,
-        otpInput.value
-      );
+  emailInput.value,
+  otpInput.value
+);
 
-      await authenticate();
+message.textContent =
+  "Authentication successful. Establishing secure administrator session...";
+
+await startAdminSession();
+
+await authenticate();
 
     } catch (error) {
       console.error("KTMS OTP verification error:", error);
