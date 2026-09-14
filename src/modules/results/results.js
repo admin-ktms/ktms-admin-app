@@ -615,13 +615,13 @@ function renderMatchdayOptions() {
     ${state.matchdays
       .map((matchday) => {
         const id =
-          matchday.matchday_id || "";
+          matchday.matchdayId || "";
 
         const number =
-          matchday.matchday_number || "";
+          matchday.matchdayNumber ?? "";
 
         const name =
-          matchday.matchday_name ||
+          matchday.matchdayName ||
           `Matchday ${number}`;
 
         return `
