@@ -3796,3 +3796,45 @@ a:hover {
     width: 100%;
   }
 }
+
+/* =========================================================
+   KTMS PAYMENT TOURNAMENT SELECTOR
+   ========================================================= */
+
+.ktms-payment-tournament-selector {
+  max-width: 720px;
+}
+
+.ktms-payment-tournament-selector label {
+  display: block;
+  margin-bottom: 7px;
+  color: var(--ktms-text-muted);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.ktms-payment-tournament-selector select {
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 12px;
+  border: 1px solid var(--ktms-border);
+  border-radius: 8px;
+  outline: none;
+  background: var(--ktms-input, #11151D);
+  color: var(--ktms-text);
+  font: inherit;
+  font-size: 13px;
+  box-sizing: border-box;
+}
+
+.ktms-payment-tournament-selector select:focus {
+  border-color: var(--ktms-primary);
+  box-shadow: 0 0 0 2px rgba(0, 217, 255, 0.08);
+}
+
+.ktms-payment-tournament-selector select:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
