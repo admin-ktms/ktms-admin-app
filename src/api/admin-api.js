@@ -48,10 +48,36 @@ export async function adminApi(
     );
   }
 
-  const headers = {
-    "Content-Type": "application/json",
-    "Authorization": `Bearer ${session.access_token}`
-  };
+  const adminSessionToken =
+  sessionStorage.getItem("ktms_admin_session");
+
+const headers = {
+  "Content-Type": "application/json",
+  "Authorization": `Bearer ${session.access_token}`
+};
+
+if (action !== "admin.session.start") {
+  if (!adminSessionToken) {
+    throw new Error(
+      "KTMS administrator session is missing."
+    );
+  }
+
+  headers["X-KTMS-Admin-Session"] =
+    adminSessionToken;
+}
+
+const response = await fetch(
+  CONFIG.ADMIN_API_URL,
+  {
+    method: "POST",
+    headers,
+    body: JSON.stringify({
+      action,
+      ...payload
+    })
+  }
+);
 
   /*
    * admin.session.start is the one admin API action
