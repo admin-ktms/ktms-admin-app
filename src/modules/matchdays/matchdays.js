@@ -8,7 +8,8 @@ let matchdayState = {
   selectedTournamentId: "",
   selectedMatchdayId: "",
   summary: null,
-  current: null
+  current: null,
+  matchdaysVisible: false
 };
 
 /* =========================================================
@@ -25,9 +26,8 @@ export async function renderMatchdays(page) {
           <h1>Matchdays</h1>
 
           <p>
-            Manage KT tournament matchday progression,
-            activation, completion, validation, and
-            operational status.
+            KT tournament matchday overview, lifecycle status,
+            validation and controlled operational intervention.
           </p>
         </div>
 
@@ -57,8 +57,8 @@ export async function renderMatchdays(page) {
             </h2>
 
             <p class="ktms-section-subtitle">
-              Select a KT tournament to manage its
-              12-matchday competition lifecycle.
+              Select a KT tournament to monitor its
+              12-matchday lifecycle.
             </p>
           </div>
 
@@ -71,9 +71,11 @@ export async function renderMatchdays(page) {
           </label>
 
           <select id="matchday-tournament">
+
             <option value="">
               Select a tournament
             </option>
+
           </select>
 
         </div>
@@ -90,7 +92,7 @@ export async function renderMatchdays(page) {
 
           <p>
             Choose a KT tournament above to view
-            and manage its matchdays.
+            its Matchday overview.
           </p>
 
         </div>
@@ -113,12 +115,13 @@ async function loadTournaments() {
   try {
     clearMessage();
 
-    const result = await adminApi(
-      "tournament.list",
-      {
-        status: null
-      }
-    );
+    const result =
+      await adminApi(
+        "tournament.list",
+        {
+          status: null
+        }
+      );
 
     matchdayState.tournaments =
       normalizeTournaments(result);
@@ -126,6 +129,7 @@ async function loadTournaments() {
     renderTournamentOptions();
 
   } catch (error) {
+
     showMessage(
       error?.message ||
         "Unable to load tournaments.",
@@ -165,7 +169,8 @@ function normalizeTournaments(result) {
       )
     }))
     .filter(
-      (row) => row.tournamentId
+      (row) =>
+        row.tournamentId
     );
 }
 
@@ -208,22 +213,31 @@ function renderTournamentOptions() {
   selector.value =
     matchdayState.selectedTournamentId;
 
-  selector.onchange = async () => {
-    matchdayState.selectedTournamentId =
-      selector.value;
+  selector.onchange =
+    async () => {
 
-    matchdayState.selectedMatchdayId = "";
+      matchdayState.selectedTournamentId =
+        selector.value;
 
-    matchdayState.summary = null;
-    matchdayState.current = null;
+      matchdayState.selectedMatchdayId =
+        "";
 
-    if (!selector.value) {
-      renderEmptyTournamentState();
-      return;
-    }
+      matchdayState.summary =
+        null;
 
-    await loadMatchdays();
-  };
+      matchdayState.current =
+        null;
+
+      matchdayState.matchdaysVisible =
+        false;
+
+      if (!selector.value) {
+        renderEmptyTournamentState();
+        return;
+      }
+
+      await loadMatchdays();
+    };
 }
 
 /* =========================================================
@@ -250,55 +264,61 @@ async function loadMatchdays() {
 
   content.innerHTML = `
     <div class="ktms-loading-state">
-      Loading matchday operations...
+      Loading Matchday overview...
     </div>
   `;
 
   clearMessage();
 
   try {
-    /*
-     * Load the authoritative Matchday collection.
-     */
-    const listResult = await adminApi(
-      "matchday.list",
-      {
-        tournamentId
-      }
-    );
+
+    const [
+      listResult,
+      summaryResult,
+      currentResult
+    ] =
+      await Promise.all([
+        adminApi(
+          "matchday.list",
+          {
+            tournamentId
+          }
+        ),
+
+        adminApi(
+          "matchday.summary",
+          {
+            tournamentId
+          }
+        ),
+
+        adminApi(
+          "matchday.current",
+          {
+            tournamentId
+          }
+        )
+      ]);
 
     matchdayState.matchdays =
-      normalizeMatchdays(listResult);
-
-    /*
-     * Load the authoritative Matchday summary.
-     */
-    const summaryResult = await adminApi(
-      "matchday.summary",
-      {
-        tournamentId
-      }
-    );
+      normalizeMatchdays(
+        listResult
+      );
 
     matchdayState.summary =
-      normalizeSummary(summaryResult);
-
-    /*
-     * Load the authoritative current Matchday.
-     */
-    const currentResult = await adminApi(
-      "matchday.current",
-      {
-        tournamentId
-      }
-    );
+      normalizeSummary(
+        summaryResult
+      );
 
     matchdayState.current =
-      normalizeCurrent(currentResult);
+      normalizeCurrent(
+        currentResult
+      );
 
     renderMatchdayDashboard();
 
   } catch (error) {
+
     content.innerHTML = `
       <div class="ktms-error-state">
 
@@ -319,7 +339,7 @@ async function loadMatchdays() {
 }
 
 /* =========================================================
-   DASHBOARD
+   OVERVIEW
    ========================================================= */
 
 function renderMatchdayDashboard() {
@@ -397,48 +417,41 @@ function renderMatchdayDashboard() {
         <div>
 
           <h2 class="ktms-section-title">
-            Matchday Schedule
+            Matchday Operations
           </h2>
 
           <p class="ktms-section-subtitle">
-            KT matchdays are controlled by the
-            tournament lifecycle. A Matchday must
-            be completed before the next Matchday
-            can become active.
+            Matchday activation is automated by
+            the KT lifecycle. Manual activation is
+            an advanced administrative override only.
           </p>
 
         </div>
 
         <button
           type="button"
-          class="ktms-secondary-button"
-          id="matchday-validate"
+          class="ktms-primary-button"
+          id="matchday-view-toggle"
         >
-          VALIDATE MATCHDAYS
+          ${
+            matchdayState.matchdaysVisible
+              ? "HIDE MATCHDAYS"
+              : "VIEW MATCHDAYS"
+          }
         </button>
 
       </div>
 
-      <div class="ktms-matchday-grid">
-
+      <div
+        id="matchday-schedule-panel"
         ${
-          matchdayState.matchdays.length
-            ? matchdayState.matchdays
-                .map(renderMatchdayCard)
-                .join("")
-            : `
-              <div class="ktms-empty-state">
-                <strong>
-                  No matchdays found
-                </strong>
-
-                <p>
-                  This tournament does not currently
-                  have a Matchday schedule.
-                </p>
-              </div>
-            `
+          matchdayState.matchdaysVisible
+            ? ""
+            : "hidden"
         }
+      >
+
+        ${renderMatchdaySchedule()}
 
       </div>
 
@@ -447,8 +460,7 @@ function renderMatchdayDashboard() {
     <div id="matchday-detail"></div>
   `;
 
-  bindMatchdayActions();
-  bindValidation();
+  bindOverviewActions();
 }
 
 /* =========================================================
@@ -457,7 +469,8 @@ function renderMatchdayDashboard() {
 
 function renderOperationalSummary() {
   const summary =
-    matchdayState.summary || {};
+    matchdayState.summary ||
+    {};
 
   const current =
     matchdayState.current ||
@@ -473,13 +486,18 @@ function renderOperationalSummary() {
     null;
 
   return `
-    <section class="ktms-matchday-summary-grid">
+
+    <section
+      class="ktms-matchday-summary-grid"
+    >
 
       ${summaryCard(
         "CURRENT",
+
         current
           ? `Matchday ${current.matchdayNumber}`
           : "None",
+
         current
           ? (
               current.matchdayName ||
@@ -487,6 +505,7 @@ function renderOperationalSummary() {
               "Active"
             )
           : "No active matchday",
+
         current
           ? "active"
           : "neutral"
@@ -494,9 +513,11 @@ function renderOperationalSummary() {
 
       ${summaryCard(
         "PREVIOUS",
+
         previous
           ? `Matchday ${previous.matchdayNumber}`
           : "None",
+
         previous
           ? (
               previous.matchdayName ||
@@ -504,6 +525,7 @@ function renderOperationalSummary() {
               "Completed"
             )
           : "No completed matchday",
+
         previous
           ? "completed"
           : "neutral"
@@ -511,9 +533,11 @@ function renderOperationalSummary() {
 
       ${summaryCard(
         "NEXT",
+
         next
           ? `Matchday ${next.matchdayNumber}`
           : "None",
+
         next
           ? (
               next.matchdayName ||
@@ -521,6 +545,7 @@ function renderOperationalSummary() {
               "Scheduled"
             )
           : "No scheduled matchday",
+
         next
           ? "scheduled"
           : "neutral"
@@ -528,14 +553,16 @@ function renderOperationalSummary() {
 
       ${summaryCard(
         "PROGRESS",
-        `${getCompletedCount()} / ${
-          matchdayState.matchdays.length
-        }`,
+
+        `${getCompletedCount()} / ${matchdayState.matchdays.length}`,
+
         "Matchdays completed",
+
         "neutral"
       )}
 
     </section>
+
   `;
 }
 
@@ -546,6 +573,7 @@ function summaryCard(
   type
 ) {
   return `
+
     <div
       class="
         ktms-matchday-summary-card
@@ -568,6 +596,7 @@ function summaryCard(
       </small>
 
     </div>
+
   `;
 }
 
@@ -581,10 +610,81 @@ function getCompletedCount() {
 }
 
 /* =========================================================
+   MATCHDAY SCHEDULE
+   ========================================================= */
+
+function renderMatchdaySchedule() {
+
+  if (
+    !matchdayState.matchdays.length
+  ) {
+
+    return `
+
+      <div class="ktms-empty-state">
+
+        <strong>
+          No matchdays found
+        </strong>
+
+        <p>
+          This tournament does not currently
+          have a Matchday schedule.
+        </p>
+
+      </div>
+
+    `;
+  }
+
+  return `
+
+    <div class="ktms-matchday-schedule-intro">
+
+      <div>
+
+        <strong>
+          12-Matchday Competition Lifecycle
+        </strong>
+
+        <p>
+          Use VIEW for operational detail.
+          Lifecycle controls are intentionally
+          separated into Advanced Controls.
+        </p>
+
+      </div>
+
+      <button
+        type="button"
+        class="ktms-secondary-button"
+        id="matchday-validate"
+      >
+        VALIDATE MATCHDAYS
+      </button>
+
+    </div>
+
+    <div class="ktms-matchday-grid">
+
+      ${matchdayState.matchdays
+        .map(
+          renderMatchdayCard
+        )
+        .join("")}
+
+    </div>
+
+  `;
+}
+
+/* =========================================================
    MATCHDAY CARD
    ========================================================= */
 
-function renderMatchdayCard(matchday) {
+function renderMatchdayCard(
+  matchday
+) {
   const status =
     normalizeStatus(
       matchday.matchdayStatus
@@ -596,6 +696,7 @@ function renderMatchdayCard(matchday) {
     );
 
   return `
+
     <article
       class="
         ktms-matchday-card
@@ -611,11 +712,15 @@ function renderMatchdayCard(matchday) {
       )}"
     >
 
-      <div class="ktms-matchday-card-top">
+      <div
+        class="ktms-matchday-card-top"
+      >
 
         <div>
 
-          <span class="ktms-matchday-number">
+          <span
+            class="ktms-matchday-number"
+          >
             MATCHDAY
             ${escapeHtml(
               matchday.matchdayNumber
@@ -639,7 +744,9 @@ function renderMatchdayCard(matchday) {
 
       </div>
 
-      <div class="ktms-matchday-card-stage">
+      <div
+        class="ktms-matchday-card-stage"
+      >
 
         ${escapeHtml(
           getMatchdayTypeLabel(
@@ -652,18 +759,24 @@ function renderMatchdayCard(matchday) {
       ${
         recovery
           ? `
-            <div class="ktms-matchday-recovery-note">
+            <div
+              class="ktms-matchday-recovery-note"
+            >
               Recovery / Rescheduling Window
             </div>
           `
           : ""
       }
 
-      <div class="ktms-matchday-card-meta">
+      <div
+        class="ktms-matchday-card-meta"
+      >
 
         <div>
 
-          <span>DATE</span>
+          <span>
+            DATE
+          </span>
 
           <strong>
             ${formatDate(
@@ -675,7 +788,9 @@ function renderMatchdayCard(matchday) {
 
         <div>
 
-          <span>TIME</span>
+          <span>
+            TIME
+          </span>
 
           <strong>
             ${formatTimeRange(
@@ -688,7 +803,9 @@ function renderMatchdayCard(matchday) {
 
       </div>
 
-      <div class="ktms-matchday-card-footer">
+      <div
+        class="ktms-matchday-card-footer"
+      >
 
         <button
           type="button"
@@ -703,17 +820,22 @@ function renderMatchdayCard(matchday) {
           VIEW
         </button>
 
-        ${renderLifecycleButton(
+        ${renderAdvancedControls(
           matchday
         )}
 
       </div>
 
     </article>
+
   `;
 }
 
-function renderLifecycleButton(
+/* =========================================================
+   ADVANCED CONTROLS
+   ========================================================= */
+
+function renderAdvancedControls(
   matchday
 ) {
   const status =
@@ -721,77 +843,163 @@ function renderLifecycleButton(
       matchday.matchdayStatus
     );
 
+  const number =
+    Number(
+      matchday.matchdayNumber
+    );
+
+  /*
+   * SCHEDULED
+   *
+   * Manual activation is deliberately hidden
+   * inside Advanced Controls.
+   */
+
   if (status === "scheduled") {
+
     const canActivate =
       canActivateMatchday(
         matchday
       );
 
     return `
-      <button
-        type="button"
-        class="
-          ktms-primary-button
-          ktms-matchday-activate
-        "
-        data-matchday-id="${escapeAttribute(
-          matchday.matchdayId
-        )}"
-        ${
-          canActivate
-            ? ""
-            : "disabled"
-        }
-        title="${
-          canActivate
-            ? "Activate Matchday"
-            : getActivationBlockReason(
-                matchday
-              )
-        }"
+
+      <details
+        class="ktms-matchday-advanced-controls"
       >
-        ACTIVATE
-      </button>
+
+        <summary>
+          ADVANCED CONTROLS
+        </summary>
+
+        <div
+          class="ktms-matchday-advanced-body"
+        >
+
+          <p>
+            Manual activation is an administrative
+            override. Normal KT lifecycle progression
+            should activate Matchdays automatically.
+          </p>
+
+          <button
+            type="button"
+            class="ktms-secondary-button ktms-matchday-activate"
+            data-matchday-id="${escapeAttribute(
+              matchday.matchdayId
+            )}"
+            ${
+              canActivate
+                ? ""
+                : "disabled"
+            }
+            title="${escapeAttribute(
+              canActivate
+                ? "Manual activation override"
+                : getActivationBlockReason(
+                    matchday
+                  )
+            )}"
+          >
+            MANUAL ACTIVATE
+          </button>
+
+          <small>
+            ${escapeHtml(
+              canActivate
+                ? `Matchday ${number} satisfies the current backend activation prerequisites.`
+                : getActivationBlockReason(
+                    matchday
+                  )
+            )}
+          </small>
+
+        </div>
+
+      </details>
+
     `;
   }
+
+  /*
+   * ACTIVE
+   *
+   * Completion is also treated as an
+   * administrative lifecycle operation.
+   */
 
   if (status === "active") {
+
     return `
-      <button
-        type="button"
-        class="
-          ktms-primary-button
-          ktms-matchday-complete
-        "
-        data-matchday-id="${escapeAttribute(
-          matchday.matchdayId
-        )}"
+
+      <details
+        class="ktms-matchday-advanced-controls"
       >
-        COMPLETE
-      </button>
+
+        <summary>
+          ADVANCED CONTROLS
+        </summary>
+
+        <div
+          class="ktms-matchday-advanced-body"
+        >
+
+          <p>
+            Completing a Matchday changes its
+            lifecycle state. Use this only after
+            all assigned fixtures are operationally ready.
+          </p>
+
+          <button
+            type="button"
+            class="ktms-secondary-button ktms-matchday-complete"
+            data-matchday-id="${escapeAttribute(
+              matchday.matchdayId
+            )}"
+          >
+            COMPLETE MATCHDAY
+          </button>
+
+        </div>
+
+      </details>
+
     `;
   }
 
+  /*
+   * COMPLETED
+   */
+
   if (status === "completed") {
+
     return `
-      <span class="ktms-matchday-completed-label">
+
+      <span
+        class="ktms-matchday-completed-label"
+      >
         COMPLETED
       </span>
+
     `;
   }
 
   return `
-    <span class="ktms-matchday-completed-label">
+
+    <span
+      class="ktms-matchday-completed-label"
+    >
       ${escapeHtml(
         matchday.matchdayStatus ||
           "UNKNOWN"
       )}
     </span>
+
   `;
 }
 
 /* =========================================================
-   MATCHDAY ACTIVATION RULE DISPLAY
+   ACTIVATION RULE DISPLAY
    ========================================================= */
 
 function canActivateMatchday(
@@ -801,6 +1009,10 @@ function canActivateMatchday(
     Number(
       matchday.matchdayNumber
     );
+
+  /*
+   * Matchday 1 has no previous Matchday.
+   */
 
   if (number <= 1) {
     return true;
@@ -834,7 +1046,9 @@ function getActivationBlockReason(
     );
 
   if (number <= 1) {
-    return "Matchday is not ready for activation.";
+    return (
+      "Matchday is not ready for activation."
+    );
   }
 
   const previous =
@@ -846,7 +1060,9 @@ function getActivationBlockReason(
     );
 
   if (!previous) {
-    return `Matchday ${number - 1} could not be found.`;
+    return (
+      `Matchday ${number - 1} could not be found.`
+    );
   }
 
   const previousStatus =
@@ -860,11 +1076,246 @@ function getActivationBlockReason(
   ) {
     return (
       `Matchday ${number - 1} must be Completed ` +
-      `before Matchday ${number} can be activated.`
+      `before Matchday ${number} can be manually activated.`
     );
   }
 
-  return "Matchday is not ready for activation.";
+  return (
+    "Matchday is not ready for activation."
+  );
+}
+
+/* =========================================================
+   OVERVIEW ACTIONS
+   ========================================================= */
+
+function bindOverviewActions() {
+
+  const toggle =
+    document.getElementById(
+      "matchday-view-toggle"
+    );
+
+  if (toggle) {
+
+    toggle.addEventListener(
+      "click",
+      () => {
+
+        matchdayState.matchdaysVisible =
+          !matchdayState.matchdaysVisible;
+
+        renderMatchdayDashboard();
+      }
+    );
+  }
+
+  bindMatchdayActions();
+
+  bindValidation();
+}
+
+/* =========================================================
+   MATCHDAY ACTIONS
+   ========================================================= */
+
+function bindMatchdayActions() {
+
+  /*
+   * VIEW
+   */
+
+  document
+    .querySelectorAll(
+      ".ktms-matchday-view"
+    )
+    .forEach(
+      (button) => {
+
+        button.addEventListener(
+          "click",
+          async () => {
+
+            await showMatchdayDetail(
+              button.dataset.matchdayId
+            );
+          }
+        );
+
+      }
+    );
+
+  /*
+   * MANUAL ACTIVATE
+   */
+
+  document
+    .querySelectorAll(
+      ".ktms-matchday-activate"
+    )
+    .forEach(
+      (button) => {
+
+        button.addEventListener(
+          "click",
+          async () => {
+
+            if (button.disabled) {
+              return;
+            }
+
+            const matchday =
+              matchdayState.matchdays.find(
+                (item) =>
+                  item.matchdayId ===
+                  button.dataset.matchdayId
+              );
+
+            const label =
+              matchday
+                ? (
+                    `Matchday ${matchday.matchdayNumber} — ` +
+                    `${
+                      matchday.matchdayName ||
+                      getDefaultMatchdayName(
+                        matchday.matchdayNumber
+                      )
+                    }`
+                  )
+                : "this Matchday";
+
+            /*
+             * IMPORTANT:
+             *
+             * No backend request happens until
+             * the administrator explicitly confirms.
+             */
+
+            const confirmed =
+              window.confirm(
+                `Are you sure you want to manually ACTIVATE ${label}?\n\n` +
+                "This is an administrative override. " +
+                "It will send the activation command to the KTMS backend.\n\n" +
+                "Use manual activation only when normal automated lifecycle progression is not appropriate."
+              );
+
+            if (!confirmed) {
+              return;
+            }
+
+            await performMatchdayAction(
+              button.dataset.matchdayId,
+              "activate"
+            );
+          }
+        );
+
+      }
+    );
+
+  /*
+   * COMPLETE
+   */
+
+  document
+    .querySelectorAll(
+      ".ktms-matchday-complete"
+    )
+    .forEach(
+      (button) => {
+
+        button.addEventListener(
+          "click",
+          async () => {
+
+            const matchday =
+              matchdayState.matchdays.find(
+                (item) =>
+                  item.matchdayId ===
+                  button.dataset.matchdayId
+              );
+
+            const label =
+              matchday
+                ? (
+                    `Matchday ${matchday.matchdayNumber} — ` +
+                    `${
+                      matchday.matchdayName ||
+                      getDefaultMatchdayName(
+                        matchday.matchdayNumber
+                      )
+                    }`
+                  )
+                : "this Matchday";
+
+            const confirmed =
+              window.confirm(
+                `Are you sure you want to COMPLETE ${label}?\n\n` +
+                "This changes the Matchday lifecycle state. " +
+                "KTMS will enforce the backend completion rules before accepting the command."
+              );
+
+            if (!confirmed) {
+              return;
+            }
+
+            await performMatchdayAction(
+              button.dataset.matchdayId,
+              "complete"
+            );
+          }
+        );
+
+      }
+    );
+}
+
+/* =========================================================
+   PERFORM MATCHDAY ACTION
+   ========================================================= */
+
+async function performMatchdayAction(
+  matchdayId,
+  action
+) {
+  clearMessage();
+
+  try {
+
+    const result =
+      await adminApi(
+        action === "activate"
+          ? "matchday.activate"
+          : "matchday.complete",
+        {
+          matchdayId
+        }
+      );
+
+    showMessage(
+      result?.message ||
+        `Matchday ${action} operation completed successfully.`,
+      "success"
+    );
+
+    /*
+     * Keep the Matchday schedule open after
+     * a successful operation.
+     */
+
+    matchdayState.matchdaysVisible =
+      true;
+
+    await loadMatchdays();
+
+  } catch (error) {
+
+    showMessage(
+      error?.message ||
+        `Unable to ${action} matchday.`,
+      "error"
+    );
+  }
 }
 
 /* =========================================================
@@ -884,6 +1335,7 @@ async function showMatchdayDetail(
   }
 
   container.innerHTML = `
+
     <section class="ktms-section">
 
       <div class="ktms-loading-state">
@@ -891,15 +1343,18 @@ async function showMatchdayDetail(
       </div>
 
     </section>
+
   `;
 
   try {
-    const result = await adminApi(
-      "matchday.get",
-      {
-        matchdayId
-      }
-    );
+
+    const result =
+      await adminApi(
+        "matchday.get",
+        {
+          matchdayId
+        }
+      );
 
     const matchday =
       normalizeMatchdayDetail(
@@ -921,6 +1376,7 @@ async function showMatchdayDetail(
       );
 
     container.innerHTML = `
+
       <section class="ktms-section">
 
         <div class="ktms-matchday-detail">
@@ -938,7 +1394,9 @@ async function showMatchdayDetail(
 
             <div>
 
-              <span class="ktms-matchday-eyebrow">
+              <span
+                class="ktms-matchday-eyebrow"
+              >
                 MATCHDAY DETAIL
               </span>
 
@@ -960,7 +1418,9 @@ async function showMatchdayDetail(
               ${
                 recovery
                   ? `
-                    <span class="ktms-matchday-recovery-note">
+                    <span
+                      class="ktms-matchday-recovery-note"
+                    >
                       Recovery / Rescheduling Window
                     </span>
                   `
@@ -975,7 +1435,9 @@ async function showMatchdayDetail(
 
           </div>
 
-          <div class="ktms-matchday-detail-grid">
+          <div
+            class="ktms-matchday-detail-grid"
+          >
 
             ${detailItem(
               "Tournament",
@@ -1037,6 +1499,7 @@ async function showMatchdayDetail(
         </div>
 
       </section>
+
     `;
 
     container.scrollIntoView({
@@ -1045,7 +1508,9 @@ async function showMatchdayDetail(
     });
 
   } catch (error) {
+
     container.innerHTML = `
+
       <section class="ktms-section">
 
         <div class="ktms-error-state">
@@ -1056,120 +1521,16 @@ async function showMatchdayDetail(
 
           <p>
             ${escapeHtml(
-              error?.message || ""
+              error?.message ||
+                ""
             )}
           </p>
 
         </div>
 
       </section>
+
     `;
-  }
-}
-
-/* =========================================================
-   ACTIONS
-   ========================================================= */
-
-function bindMatchdayActions() {
-  document
-    .querySelectorAll(
-      ".ktms-matchday-view"
-    )
-    .forEach((button) => {
-      button.addEventListener(
-        "click",
-        async () => {
-          await showMatchdayDetail(
-            button.dataset.matchdayId
-          );
-        }
-      );
-    });
-
-  document
-    .querySelectorAll(
-      ".ktms-matchday-activate"
-    )
-    .forEach((button) => {
-      button.addEventListener(
-        "click",
-        async () => {
-          if (button.disabled) {
-            return;
-          }
-
-          await performMatchdayAction(
-            button.dataset.matchdayId,
-            "activate"
-          );
-        }
-      );
-    });
-
-  document
-    .querySelectorAll(
-      ".ktms-matchday-complete"
-    )
-    .forEach((button) => {
-      button.addEventListener(
-        "click",
-        async () => {
-          await performMatchdayAction(
-            button.dataset.matchdayId,
-            "complete"
-          );
-        }
-      );
-    });
-}
-
-async function performMatchdayAction(
-  matchdayId,
-  action
-) {
-  const actionName =
-    action === "activate"
-      ? "ACTIVATE"
-      : "COMPLETE";
-
-  const confirmed =
-    window.confirm(
-      `${actionName} this matchday?\n\n` +
-      "KTMS will enforce the Matchday lifecycle rules."
-    );
-
-  if (!confirmed) {
-    return;
-  }
-
-  clearMessage();
-
-  try {
-    const result =
-      await adminApi(
-        action === "activate"
-          ? "matchday.activate"
-          : "matchday.complete",
-        {
-          matchdayId
-        }
-      );
-
-    showMessage(
-      result?.message ||
-        `Matchday ${action} operation completed successfully.`,
-      "success"
-    );
-
-    await loadMatchdays();
-
-  } catch (error) {
-    showMessage(
-      error?.message ||
-        `Unable to ${action} matchday.`,
-      "error"
-    );
   }
 }
 
@@ -1198,6 +1559,7 @@ async function validateMatchdays() {
     matchdayState.selectedTournamentId;
 
   if (!tournamentId) {
+
     showMessage(
       "Select a tournament first.",
       "info"
@@ -1218,6 +1580,7 @@ async function validateMatchdays() {
   clearMessage();
 
   try {
+
     const result =
       await adminApi(
         "matchday.validate",
@@ -1232,6 +1595,7 @@ async function validateMatchdays() {
       );
 
     if (validation.valid) {
+
       showMessage(
         validation.message ||
           "Matchday configuration is valid.",
@@ -1241,7 +1605,7 @@ async function validateMatchdays() {
       return;
     }
 
-    const problems =
+    showMessage(
       validation.errors.length
         ? validation.errors.join(
             " | "
@@ -1249,14 +1613,12 @@ async function validateMatchdays() {
         : (
             validation.message ||
             "Matchday validation failed."
-          );
-
-    showMessage(
-      problems,
+          ),
       "error"
     );
 
   } catch (error) {
+
     showMessage(
       error?.message ||
         "Unable to validate matchdays.",
@@ -1264,6 +1626,7 @@ async function validateMatchdays() {
     );
 
   } finally {
+
     if (button) {
       button.disabled = false;
     }
@@ -1274,7 +1637,9 @@ async function validateMatchdays() {
    NORMALIZATION
    ========================================================= */
 
-function normalizeMatchdays(result) {
+function normalizeMatchdays(
+  result
+) {
   const rows =
     result?.data ||
     result?.matchdays ||
@@ -1287,9 +1652,12 @@ function normalizeMatchdays(result) {
   }
 
   return rows
-    .map(normalizeMatchday)
+    .map(
+      normalizeMatchday
+    )
     .filter(
-      (row) => row.matchdayId
+      (row) =>
+        row.matchdayId
     )
     .sort(
       (a, b) =>
@@ -1298,31 +1666,38 @@ function normalizeMatchdays(result) {
     );
 }
 
-function normalizeMatchday(row) {
+function normalizeMatchday(
+  row
+) {
   return {
-    matchdayId: String(
-      row.matchdayId ??
-      row.matchday_id ??
-      ""
-    ),
 
-    tournamentId: String(
-      row.tournamentId ??
-      row.tournament_id ??
-      ""
-    ),
+    matchdayId:
+      String(
+        row.matchdayId ??
+        row.matchday_id ??
+        ""
+      ),
 
-    matchdayNumber: Number(
-      row.matchdayNumber ??
-      row.matchday_number ??
-      0
-    ),
+    tournamentId:
+      String(
+        row.tournamentId ??
+        row.tournament_id ??
+        ""
+      ),
 
-    matchdayName: String(
-      row.matchdayName ??
-      row.matchday_name ??
-      ""
-    ),
+    matchdayNumber:
+      Number(
+        row.matchdayNumber ??
+        row.matchday_number ??
+        0
+      ),
+
+    matchdayName:
+      String(
+        row.matchdayName ??
+        row.matchday_name ??
+        ""
+      ),
 
     matchdayDate:
       row.matchdayDate ??
@@ -1339,16 +1714,18 @@ function normalizeMatchday(row) {
       row.end_time ??
       null,
 
-    stage: String(
-      row.stage ??
-      ""
-    ),
+    stage:
+      String(
+        row.stage ??
+        ""
+      ),
 
-    matchdayStatus: String(
-      row.matchdayStatus ??
-      row.matchday_status ??
-      "Scheduled"
-    ),
+    matchdayStatus:
+      String(
+        row.matchdayStatus ??
+        row.matchday_status ??
+        "Scheduled"
+      ),
 
     createdDatetime:
       row.createdDatetime ??
@@ -1383,7 +1760,9 @@ function normalizeMatchdayDetail(
   );
 }
 
-function normalizeSummary(result) {
+function normalizeSummary(
+  result
+) {
   const data =
     result?.data ||
     result?.summary ||
@@ -1400,7 +1779,9 @@ function normalizeSummary(result) {
   return data;
 }
 
-function normalizeCurrent(result) {
+function normalizeCurrent(
+  result
+) {
   const data =
     result?.data ||
     result?.current ||
@@ -1414,11 +1795,6 @@ function normalizeCurrent(result) {
     return null;
   }
 
-  /*
-   * Some RPC wrappers may return the current
-   * Matchday directly, while others may return
-   * { matchday: {...} }.
-   */
   if (
     data.matchday &&
     typeof data.matchday === "object"
@@ -1453,6 +1829,7 @@ function normalizeValidation(
     typeof data !== "object" ||
     Array.isArray(data)
   ) {
+
     return {
       valid: false,
       errors: [],
@@ -1468,6 +1845,7 @@ function normalizeValidation(
     [];
 
   return {
+
     valid:
       data.valid === true ||
       data.is_valid === true ||
@@ -1501,7 +1879,9 @@ function isRecoveryMatchday(
   matchdayNumber
 ) {
   return RECOVERY_MATCHDAYS.has(
-    Number(matchdayNumber)
+    Number(
+      matchdayNumber
+    )
   );
 }
 
@@ -1522,6 +1902,7 @@ function getMatchdayTypeLabel(
   }
 
   switch (number) {
+
     case 1:
     case 2:
     case 3:
@@ -1557,8 +1938,11 @@ function getDefaultMatchdayName(
   matchdayNumber
 ) {
   switch (
-    Number(matchdayNumber)
+    Number(
+      matchdayNumber
+    )
   ) {
+
     case 1:
       return "Group Stage — Matchday 1";
 
@@ -1615,6 +1999,7 @@ function renderEmptyTournamentState() {
   }
 
   content.innerHTML = `
+
     <div class="ktms-empty-state">
 
       <strong>
@@ -1623,15 +2008,19 @@ function renderEmptyTournamentState() {
 
       <p>
         Choose a KT tournament above to
-        view and manage its matchdays.
+        view its Matchday overview.
       </p>
 
     </div>
+
   `;
 }
 
-function statusBadge(status) {
+function statusBadge(
+  status
+) {
   return `
+
     <span
       class="
         ktms-status
@@ -1641,15 +2030,21 @@ function statusBadge(status) {
       "
     >
       ${escapeHtml(
-        formatStatus(status)
+        formatStatus(
+          status
+        )
       )}
     </span>
+
   `;
 }
 
-function normalizeStatus(value) {
+function normalizeStatus(
+  value
+) {
   return String(
-    value || "unknown"
+    value ||
+      "unknown"
   )
     .trim()
     .toLowerCase()
@@ -1663,9 +2058,12 @@ function normalizeStatus(value) {
     );
 }
 
-function formatStatus(value) {
+function formatStatus(
+  value
+) {
   return String(
-    value || "Unknown"
+    value ||
+      "Unknown"
   );
 }
 
@@ -1674,28 +2072,41 @@ function detailItem(
   value
 ) {
   return `
-    <div class="ktms-matchday-detail-item">
+
+    <div
+      class="ktms-matchday-detail-item"
+    >
 
       <span>
-        ${escapeHtml(label)}
+        ${escapeHtml(
+          label
+        )}
       </span>
 
       <strong>
         ${escapeHtml(
-          value ?? "—"
+          value ??
+            "—"
         )}
       </strong>
 
     </div>
+
   `;
 }
 
-function formatNumber(value) {
+function formatNumber(
+  value
+) {
   const number =
-    Number(value);
+    Number(
+      value
+    );
 
   if (
-    !Number.isFinite(number)
+    !Number.isFinite(
+      number
+    )
   ) {
     return "0";
   }
@@ -1705,20 +2116,26 @@ function formatNumber(value) {
   );
 }
 
-function formatDate(value) {
+function formatDate(
+  value
+) {
   if (!value) {
     return "—";
   }
 
   const date =
-    new Date(value);
+    new Date(
+      value
+    );
 
   if (
     Number.isNaN(
       date.getTime()
     )
   ) {
-    return String(value);
+    return String(
+      value
+    );
   }
 
   return date.toLocaleDateString(
@@ -1731,13 +2148,17 @@ function formatDate(value) {
   );
 }
 
-function formatTime(value) {
+function formatTime(
+  value
+) {
   if (!value) {
     return "—";
   }
 
   const raw =
-    String(value);
+    String(
+      value
+    );
 
   if (
     raw.length >= 5 &&
@@ -1758,9 +2179,13 @@ function formatTimeRange(
   start,
   end
 ) {
-  return `${formatTime(
-    start
-  )}–${formatTime(end)}`;
+  return (
+    `${formatTime(
+      start
+    )}–${formatTime(
+      end
+    )}`
+  );
 }
 
 function formatDateTime(
@@ -1771,14 +2196,18 @@ function formatDateTime(
   }
 
   const date =
-    new Date(value);
+    new Date(
+      value
+    );
 
   if (
     Number.isNaN(
       date.getTime()
     )
   ) {
-    return String(value);
+    return String(
+      value
+    );
   }
 
   return date.toLocaleString(
@@ -1810,7 +2239,8 @@ function showMessage(
     `ktms-message ktms-message-${type}`;
 
   element.textContent =
-    message || "";
+    message ||
+    "";
 
   element.hidden =
     !message;
@@ -1826,9 +2256,11 @@ function clearMessage() {
     return;
   }
 
-  element.textContent = "";
+  element.textContent =
+    "";
 
-  element.hidden = true;
+  element.hidden =
+    true;
 
   element.className =
     "ktms-message";
@@ -1847,9 +2279,12 @@ function bindRefresh() {
   button.addEventListener(
     "click",
     async () => {
-      button.disabled = true;
+
+      button.disabled =
+        true;
 
       try {
+
         await loadTournaments();
 
         if (
@@ -1859,6 +2294,7 @@ function bindRefresh() {
         }
 
       } catch (error) {
+
         showMessage(
           error?.message ||
             "Unable to refresh Matchday data.",
@@ -1866,14 +2302,20 @@ function bindRefresh() {
         );
 
       } finally {
-        button.disabled = false;
+
+        button.disabled =
+          false;
       }
     }
   );
 }
 
-function escapeHtml(value) {
-  return String(value)
+function escapeHtml(
+  value
+) {
+  return String(
+    value
+  )
     .replaceAll(
       "&",
       "&amp;"
@@ -1896,6 +2338,10 @@ function escapeHtml(value) {
     );
 }
 
-function escapeAttribute(value) {
-  return escapeHtml(value);
+function escapeAttribute(
+  value
+) {
+  return escapeHtml(
+    value
+  );
 }
