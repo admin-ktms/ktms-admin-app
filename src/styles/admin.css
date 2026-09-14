@@ -3114,3 +3114,180 @@ a:hover {
   }
 }
 
+/* =========================================================
+   PLAYER ADMINISTRATION
+   ========================================================= */
+
+.ktms-player-admin-state-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 18px;
+}
+
+.ktms-player-admin-state {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 16px;
+  background: #11151D;
+  border: 1px solid #252B36;
+  border-radius: 8px;
+}
+
+.ktms-player-admin-state > span {
+  color: #8B95A5;
+  font-size: 13px;
+}
+
+.ktms-player-admin-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+  margin-top: 20px;
+}
+
+.ktms-player-admin-action-group {
+  padding: 18px;
+  background: #080A0F;
+  border: 1px solid #252B36;
+  border-radius: 8px;
+}
+
+.ktms-player-admin-action-group p {
+  margin: 4px 0 0;
+  color: #8B95A5;
+  font-size: 13px;
+}
+
+.ktms-player-action-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.ktms-player-admin-action {
+  appearance: none;
+  border: 1px solid #252B36;
+  background: #11151D;
+  color: #F5F7FA;
+  border-radius: 6px;
+  padding: 10px 14px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: .04em;
+  cursor: pointer;
+}
+
+.ktms-player-admin-action:hover {
+  border-color: #00D9FF;
+}
+
+.ktms-player-admin-action:disabled {
+  opacity: .55;
+  cursor: not-allowed;
+}
+
+.ktms-player-admin-action.is-warning {
+  border-color: #FFC857;
+}
+
+.ktms-player-admin-action.is-danger {
+  border-color: #e05d5d;
+}
+
+.ktms-player-admin-action.is-success {
+  border-color: #00D9FF;
+}
+
+.ktms-player-admin-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.ktms-player-admin-modal[hidden] {
+  display: none;
+}
+
+.ktms-player-admin-modal-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, .72);
+}
+
+.ktms-player-admin-modal-dialog {
+  position: relative;
+  width: min(560px, 100%);
+  max-height: calc(100vh - 40px);
+  overflow-y: auto;
+  padding: 22px;
+  background: #080A0F;
+  border: 1px solid #252B36;
+  border-radius: 10px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, .45);
+}
+
+.ktms-player-admin-modal-warning {
+  margin: 16px 0;
+  padding: 12px 14px;
+  background: #11151D;
+  border: 1px solid #FFC857;
+  border-radius: 6px;
+  color: #F5F7FA;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.ktms-player-admin-reason {
+  display: block;
+  margin-bottom: 8px;
+  color: #F5F7FA;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.ktms-player-admin-reason-input {
+  width: 100%;
+  min-height: 120px;
+  resize: vertical;
+  box-sizing: border-box;
+}
+
+.ktms-player-admin-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+@media (max-width: 800px) {
+  .ktms-player-admin-state-grid,
+  .ktms-player-admin-actions {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 560px) {
+  .ktms-player-admin-modal {
+    padding: 10px;
+  }
+
+  .ktms-player-admin-modal-dialog {
+    padding: 16px;
+  }
+
+  .ktms-player-admin-modal-actions {
+    flex-direction: column-reverse;
+  }
+
+  .ktms-player-admin-modal-actions button {
+    width: 100%;
+  }
+}
