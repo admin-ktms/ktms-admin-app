@@ -1,11 +1,10 @@
-
 import { adminApi } from "../../api/admin-api.js";
 
 let paymentState = {
   summary: null,
   transactions: [],
   selectedTransaction: null,
-
+  tournaments: [],
   filters: {
     tournamentId: "",
     paymentStatus: "",
@@ -18,483 +17,338 @@ let paymentState = {
 };
 
 export async function renderPayments(page) {
+  paymentState.selectedTransaction = null;
+
   page.innerHTML = `
-    <div class="ktms-module">
+    <div class="ktms-payment-module">
 
       <div class="ktms-module-toolbar">
         <div>
-          <h2>Payments</h2>
-          <p>
-            Monitor payments, verify bank transfers, and review
-            tournament payment activity.
-          </p>
+          <h1>Payments</h1>
+          <p>Monitor payments, verify bank transfers, and review tournament payment activity.</p>
         </div>
 
-        <button
-          id="payments-refresh-button"
-          class="ktms-secondary-button"
-          type="button"
-        >
+        <button type="button" class="ktms-secondary-button" id="payment-refresh">
           REFRESH
         </button>
       </div>
 
-      <div id="payments-message" class="ktms-message"></div>
+      <div id="payment-message" class="ktms-message"></div>
 
-      <section id="payments-summary">
-        <div class="ktms-loading-state">
-          Loading payment summary...
-        </div>
-      </section>
-
+      <!-- Tournament Selection -->
       <section class="ktms-section">
-
-        <div class="ktms-module-toolbar">
-          <div>
-            <h3>Transactions</h3>
-            <p>
-              Payment transactions recorded by KTMS.
-            </p>
-          </div>
+        <div class="ktms-section-header">
+          <h2 class="ktms-section-title">Tournament</h2>
+          <p class="ktms-section-subtitle">
+            Select a KT tournament to view its payment activity.
+          </p>
         </div>
 
-        <div class="ktms-payment-filters">
+        <div class="ktms-payment-tournament-selector">
+          <label for="payment-tournament">
+            Tournament
+          </label>
 
-          <div class="ktms-payment-filter">
-            <label for="payment-search">
-              Search
-            </label>
-
-            <input
-              id="payment-search"
-              class="ktms-filter"
-              type="search"
-              placeholder="Reference, player, transaction..."
-            />
-          </div>
-
-          <div class="ktms-payment-filter">
-            <label for="payment-tournament">
-              Tournament
-            </label>
-
-            <input
-              id="payment-tournament"
-              class="ktms-filter"
-              type="text"
-              placeholder="KT-2026-E01"
-            />
-          </div>
-
-          <div class="ktms-payment-filter">
-            <label for="payment-status">
-              Status
-            </label>
-
-            <select id="payment-status" class="ktms-filter">
-              <option value="">All statuses</option>
-              <option value="SUCCESS">Successful</option>
-              <option value="PENDING">Pending</option>
-              <option value="AWAITING_VERIFICATION">
-                Awaiting Verification
-              </option>
-              <option value="FAILED">Failed</option>
-              <option value="REFUNDED">Refunded</option>
-            </select>
-          </div>
-
-          <div class="ktms-payment-filter">
-            <label for="payment-method">
-              Method
-            </label>
-
-            <select id="payment-method" class="ktms-filter">
-              <option value="">All methods</option>
-              <option value="Paystack">Paystack</option>
-              <option value="Bank Transfer">Bank Transfer</option>
-            </select>
-          </div>
-
-          <div class="ktms-payment-filter">
-            <label for="payment-provider">
-              Provider
-            </label>
-
-            <select id="payment-provider" class="ktms-filter">
-              <option value="">All providers</option>
-              <option value="Paystack">Paystack</option>
-              <option value="Bank Transfer">Bank Transfer</option>
-            </select>
-          </div>
-
-          <div class="ktms-payment-filter">
-            <label for="payment-from">
-              From
-            </label>
-
-            <input
-              id="payment-from"
-              class="ktms-filter"
-              type="datetime-local"
-            />
-          </div>
-
-          <div class="ktms-payment-filter">
-            <label for="payment-to">
-              To
-            </label>
-
-            <input
-              id="payment-to"
-              class="ktms-filter"
-              type="datetime-local"
-            />
-          </div>
-
-          <div class="ktms-payment-filter-action">
-            <button
-              id="payment-filter-button"
-              class="ktms-primary-button"
-              type="button"
-            >
-              APPLY FILTERS
-            </button>
-          </div>
-
-        </div>
-
-      </section>
-
-      <section id="payments-table-section">
-        <div class="ktms-loading-state">
-          Loading transactions...
+          <select id="payment-tournament">
+            <option value="">Select a tournament</option>
+          </select>
         </div>
       </section>
 
-      <section
-        id="payment-detail-section"
-        class="ktms-payment-detail-section"
-        hidden
-      ></section>
+      <!-- Payment Content -->
+      <div id="payment-content">
+        <div class="ktms-empty-state">
+          <strong>Select a tournament</strong>
+          Choose a KT tournament above to view its payment activity.
+        </div>
+      </div>
 
     </div>
   `;
 
-  bindPaymentEvents();
+  bindTournamentSelector();
+  bindRefresh();
 
-  await loadPayments();
+  await loadTournaments();
 }
 
-function bindPaymentEvents() {
-  const refreshButton = document.getElementById(
-    "payments-refresh-button"
-  );
+async function loadTournaments() {
+  const selector = document.getElementById("payment-tournament");
 
-  const filterButton = document.getElementById(
-    "payment-filter-button"
-  );
-
-  if (refreshButton) {
-    refreshButton.addEventListener(
-      "click",
-      async () => {
-        await loadPayments();
-      }
-    );
+  if (!selector) {
+    return;
   }
 
-  if (filterButton) {
-    filterButton.addEventListener(
-      "click",
-      async () => {
-        readFilters();
-        await loadPayments();
-      }
-    );
-  }
-
-  const search = document.getElementById(
-    "payment-search"
-  );
-
-  if (search) {
-    search.addEventListener(
-      "keydown",
-      async (event) => {
-        if (event.key !== "Enter") return;
-
-        readFilters();
-        await loadPayments();
-      }
-    );
-  }
-}
-
-function readFilters() {
-  paymentState.filters = {
-    tournamentId:
-      getInputValue("payment-tournament"),
-
-    paymentStatus:
-      getInputValue("payment-status"),
-
-    paymentMethod:
-      getInputValue("payment-method"),
-
-    paymentProvider:
-      getInputValue("payment-provider"),
-
-    search:
-      getInputValue("payment-search"),
-
-    fromDatetime:
-      getInputValue("payment-from"),
-
-    toDatetime:
-      getInputValue("payment-to")
-  };
-}
-
-async function loadPayments() {
-  const summaryContainer =
-    document.getElementById(
-      "payments-summary"
-    );
-
-  const tableContainer =
-    document.getElementById(
-      "payments-table-section"
-    );
-
-  const message =
-    document.getElementById(
-      "payments-message"
-    );
-
-  if (summaryContainer) {
-    summaryContainer.innerHTML = `
-      <div class="ktms-loading-state">
-        Loading payment summary...
-      </div>
-    `;
-  }
-
-  if (tableContainer) {
-    tableContainer.innerHTML = `
-      <div class="ktms-loading-state">
-        Loading transactions...
-      </div>
-    `;
-  }
-
-  if (message) {
-    message.textContent = "";
-    message.className = "ktms-message";
-  }
+  selector.disabled = true;
 
   try {
-    const [
-      summary,
-      transactions
-    ] = await Promise.all([
-      adminApi(
-        "payment.summary",
-        {
-          tournamentId:
-            paymentState.filters.tournamentId ||
-            null,
+    /*
+     * Reuse the existing tournament read endpoint.
+     * This assumes the Admin API already supports tournament.list,
+     * which is already used by the Admin Console tournament module.
+     */
+    const result = await adminApi("tournament.list", {});
 
-          fromDatetime:
-            normalizeDatetime(
-              paymentState.filters.fromDatetime
-            ),
+    paymentState.tournaments = normalizeTournaments(result);
 
-          toDatetime:
-            normalizeDatetime(
-              paymentState.filters.toDatetime
-            )
-        }
-      ),
+    selector.innerHTML = `
+      <option value="">Select a tournament</option>
+      ${paymentState.tournaments
+        .map((tournament) => {
+          return `
+            <option value="${escapeAttribute(tournament.tournamentId)}">
+              ${escapeHtml(tournament.tournamentId)}
+              — ${escapeHtml(tournament.tournamentName)}
+            </option>
+          `;
+        })
+        .join("")}
+    `;
 
-      adminApi(
-        "payment.list",
-        {
-          tournamentId:
-            paymentState.filters.tournamentId ||
-            null,
+    selector.disabled = false;
 
-          paymentStatus:
-            paymentState.filters.paymentStatus ||
-            null,
+    /*
+     * Restore the previous tournament if one exists.
+     */
+    if (paymentState.filters.tournamentId) {
+      const exists = paymentState.tournaments.some(
+        (tournament) =>
+          tournament.tournamentId === paymentState.filters.tournamentId
+      );
 
-          paymentMethod:
-            paymentState.filters.paymentMethod ||
-            null,
-
-          paymentProvider:
-            paymentState.filters.paymentProvider ||
-            null,
-
-          search:
-            paymentState.filters.search ||
-            null,
-
-          fromDatetime:
-            normalizeDatetime(
-              paymentState.filters.fromDatetime
-            ),
-
-          toDatetime:
-            normalizeDatetime(
-              paymentState.filters.toDatetime
-            )
-        }
-      )
-    ]);
-
-    paymentState.summary =
-      normalizeSummary(summary);
-
-    paymentState.transactions =
-      normalizeTransactions(transactions);
-
-    renderSummary(
-      paymentState.summary
-    );
-
-    renderTransactions(
-      paymentState.transactions
-    );
+      if (exists) {
+        selector.value = paymentState.filters.tournamentId;
+        await loadTournamentPayments();
+      }
+    }
   } catch (error) {
-    if (summaryContainer) {
-      summaryContainer.innerHTML = "";
-    }
-
-    if (tableContainer) {
-      tableContainer.innerHTML = `
-        <div class="ktms-error-state">
-          <strong>
-            Unable to load payments
-          </strong>
-
-          <p>
-            ${escapeHtml(
-              error?.message ||
-              "An unexpected error occurred."
-            )}
-          </p>
-        </div>
-      `;
-    }
+    selector.disabled = false;
 
     showMessage(
-      error?.message ||
-      "Unable to load payment data.",
+      error?.message || "Unable to load tournaments.",
       "error"
     );
   }
 }
 
-function normalizeSummary(data) {
-  return {
-    transactionCount:
-      toNumber(data?.transactionCount),
+function normalizeTournaments(result) {
+  const rows =
+    result?.tournaments ||
+    result?.data ||
+    result?.items ||
+    result ||
+    [];
 
-    successfulCount:
-      toNumber(data?.successfulCount),
+  if (!Array.isArray(rows)) {
+    return [];
+  }
 
-    pendingCount:
-      toNumber(data?.pendingCount),
+  return rows
+    .map((row) => {
+      const tournamentId =
+        row.tournamentId ??
+        row.tournament_id ??
+        row.id ??
+        "";
 
-    failedCount:
-      toNumber(data?.failedCount),
+      const tournamentName =
+        row.tournamentName ??
+        row.tournament_name ??
+        row.name ??
+        tournamentId;
 
-    refundedCount:
-      toNumber(data?.refundedCount),
-
-    successfulAmount:
-      toNumber(data?.successfulAmount),
-
-    pendingAmount:
-      toNumber(data?.pendingAmount),
-
-    failedAmount:
-      toNumber(data?.failedAmount),
-
-    currency:
-      data?.currency ||
-      "NGN"
-  };
+      return {
+        tournamentId: String(tournamentId),
+        tournamentName: String(tournamentName)
+      };
+    })
+    .filter((row) => row.tournamentId);
 }
 
-function normalizeTransactions(data) {
-  if (Array.isArray(data)) {
-    return data;
+function bindTournamentSelector() {
+  const selector = document.getElementById("payment-tournament");
+
+  if (!selector) {
+    return;
   }
 
-  if (Array.isArray(data?.transactions)) {
-    return data.transactions;
-  }
+  selector.addEventListener("change", async () => {
+    paymentState.filters.tournamentId = selector.value;
+    paymentState.selectedTransaction = null;
 
-  if (Array.isArray(data?.rows)) {
-    return data.rows;
-  }
+    if (!paymentState.filters.tournamentId) {
+      renderUnselectedTournament();
+      return;
+    }
 
-  return [];
+    await loadTournamentPayments();
+  });
 }
 
-function renderSummary(summary) {
-  const container =
-    document.getElementById(
-      "payments-summary"
-    );
+function bindRefresh() {
+  const button = document.getElementById("payment-refresh");
 
-  if (!container) return;
+  if (!button) {
+    return;
+  }
 
-  container.innerHTML = `
+  button.addEventListener("click", async () => {
+    if (!paymentState.filters.tournamentId) {
+      await loadTournaments();
+      return;
+    }
+
+    await loadTournamentPayments();
+  });
+}
+
+async function loadTournamentPayments() {
+  const tournamentId = paymentState.filters.tournamentId;
+
+  /*
+   * Critical protection:
+   * Never load payments without a tournament ID.
+   */
+  if (!tournamentId) {
+    renderUnselectedTournament();
+    return;
+  }
+
+  const content = document.getElementById("payment-content");
+
+  if (!content) {
+    return;
+  }
+
+  content.innerHTML = `
+    <div class="ktms-loading-state">
+      Loading payment activity...
+    </div>
+  `;
+
+  clearMessage();
+
+  try {
+    const [summaryResult, transactionResult] = await Promise.all([
+      adminApi("payment.summary", {
+        tournamentId,
+        fromDatetime: normalizeDatetime(
+          paymentState.filters.fromDatetime
+        ),
+        toDatetime: normalizeDatetime(
+          paymentState.filters.toDatetime
+        )
+      }),
+
+      adminApi("payment.list", {
+        tournamentId,
+        paymentStatus:
+          paymentState.filters.paymentStatus || null,
+        paymentMethod:
+          paymentState.filters.paymentMethod || null,
+        paymentProvider:
+          paymentState.filters.paymentProvider || null,
+        search:
+          paymentState.filters.search || null,
+        fromDatetime: normalizeDatetime(
+          paymentState.filters.fromDatetime
+        ),
+        toDatetime: normalizeDatetime(
+          paymentState.filters.toDatetime
+        )
+      })
+    ]);
+
+    paymentState.summary = normalizeSummary(summaryResult);
+    paymentState.transactions =
+      normalizeTransactions(transactionResult);
+
+    renderTournamentPaymentContent();
+  } catch (error) {
+    content.innerHTML = `
+      <div class="ktms-error-state">
+        Unable to load payment activity.
+        ${escapeHtml(error?.message || "")}
+      </div>
+    `;
+  }
+}
+
+function renderTournamentPaymentContent() {
+  const content = document.getElementById("payment-content");
+
+  if (!content) {
+    return;
+  }
+
+  content.innerHTML = `
+    <section class="ktms-section">
+
+      <div class="ktms-section-header">
+        <h2 class="ktms-section-title">Payments</h2>
+        <p class="ktms-section-subtitle">
+          Payment activity for
+          <strong>${escapeHtml(
+            paymentState.filters.tournamentId
+          )}</strong>.
+        </p>
+      </div>
+
+      ${renderSummary()}
+
+      ${renderFilters()}
+
+      <div id="payment-transactions">
+        ${renderTransactions()}
+      </div>
+
+      <div id="payment-detail-container"></div>
+
+    </section>
+  `;
+
+  bindPaymentFilters();
+  bindTransactionButtons();
+}
+
+function renderSummary() {
+  const summary = paymentState.summary || {};
+
+  return `
     <div class="ktms-payment-summary-grid">
 
       ${paymentStatCard(
         "SUCCESSFUL",
-        summary.successfulCount,
-        formatMoney(
-          summary.successfulAmount,
-          summary.currency
-        ),
+        toNumber(summary.successfulCount),
+        formatMoney(summary.successfulAmount),
         "success"
       )}
 
       ${paymentStatCard(
         "PENDING",
-        summary.pendingCount,
-        formatMoney(
-          summary.pendingAmount,
-          summary.currency
-        ),
+        toNumber(summary.pendingCount),
+        formatMoney(summary.pendingAmount),
         "pending"
       )}
 
       ${paymentStatCard(
         "FAILED",
-        summary.failedCount,
-        formatMoney(
-          summary.failedAmount,
-          summary.currency
-        ),
+        toNumber(summary.failedCount),
+        formatMoney(summary.failedAmount),
         "failed"
       )}
 
       ${paymentStatCard(
         "REFUNDED",
-        summary.refundedCount,
-        "",
+        toNumber(summary.refundedCount),
+        null,
         "refunded"
       )}
 
       ${paymentStatCard(
         "TOTAL TRANSACTIONS",
-        summary.transactionCount,
-        "",
+        toNumber(summary.transactionCount),
+        null,
         "neutral"
       )}
 
@@ -502,245 +356,265 @@ function renderSummary(summary) {
   `;
 }
 
-function paymentStatCard(
-  label,
-  count,
-  amount,
-  type
-) {
+function paymentStatCard(label, value, secondary, type) {
   return `
-    <article
-      class="
-        ktms-payment-stat
-        ktms-payment-stat-${escapeAttribute(type)}
-      "
-    >
-      <span class="ktms-payment-stat-label">
+    <div class="ktms-payment-stat ktms-payment-stat-${type}">
+      <div class="ktms-payment-stat-label">
         ${escapeHtml(label)}
-      </span>
+      </div>
 
-      <strong class="ktms-payment-stat-count">
-        ${escapeHtml(
-          formatNumber(count)
-        )}
-      </strong>
+      <div class="ktms-payment-stat-value">
+        ${formatNumber(value)}
+      </div>
 
       ${
-        amount
+        secondary
           ? `
-            <span class="ktms-payment-stat-amount">
-              ${escapeHtml(amount)}
-            </span>
+            <div class="ktms-payment-secondary-text">
+              ${escapeHtml(secondary)}
+            </div>
           `
           : ""
       }
-    </article>
+    </div>
   `;
 }
 
-function renderTransactions(
-  transactions
-) {
-  const container =
-    document.getElementById(
-      "payments-table-section"
-    );
-
-  if (!container) return;
-
-  if (!transactions.length) {
-    container.innerHTML = `
-      <section class="ktms-section">
-        ${emptyState(
-          "No payment transactions",
-          "No payment transactions match the current filters."
-        )}
-      </section>
-    `;
-
-    return;
-  }
-
-  container.innerHTML = `
+function renderFilters() {
+  return `
     <section class="ktms-section">
 
-      <div class="ktms-module-toolbar">
-        <div>
-          <h3>
-            Payment Transactions
-          </h3>
+      <div class="ktms-section-header">
+        <h3 class="ktms-section-title">Transactions</h3>
+        <p class="ktms-section-subtitle">
+          Payment transactions recorded for this tournament.
+        </p>
+      </div>
 
-          <p>
-            ${escapeHtml(
-              `${transactions.length} transaction${
-                transactions.length === 1
-                  ? ""
-                  : "s"
-              } loaded`
-            )}
-          </p>
+      <div class="ktms-payment-filters">
+
+        <div class="ktms-payment-filter">
+          <label for="payment-search">Search</label>
+          <input
+            id="payment-search"
+            type="search"
+            placeholder="Reference, player, transaction..."
+            value="${escapeAttribute(
+              paymentState.filters.search
+            )}"
+          />
         </div>
+
+        <div class="ktms-payment-filter">
+          <label for="payment-status">Status</label>
+
+          <select id="payment-status">
+            <option value="">All statuses</option>
+            <option value="SUCCESSFUL">Successful</option>
+            <option value="PENDING">Pending</option>
+            <option value="AWAITING_VERIFICATION">
+              Awaiting Verification
+            </option>
+            <option value="FAILED">Failed</option>
+            <option value="REFUNDED">Refunded</option>
+          </select>
+        </div>
+
+        <div class="ktms-payment-filter">
+          <label for="payment-method">Method</label>
+
+          <select id="payment-method">
+            <option value="">All methods</option>
+            <option value="PAYSTACK">Paystack</option>
+            <option value="BANK_TRANSFER">
+              Bank Transfer
+            </option>
+          </select>
+        </div>
+
+        <div class="ktms-payment-filter">
+          <label for="payment-provider">Provider</label>
+
+          <select id="payment-provider">
+            <option value="">All providers</option>
+            <option value="PAYSTACK">Paystack</option>
+            <option value="BANK_TRANSFER">
+              Bank Transfer
+            </option>
+          </select>
+        </div>
+
+        <div class="ktms-payment-filter">
+          <label for="payment-from">From</label>
+
+          <input
+            id="payment-from"
+            type="datetime-local"
+            value="${escapeAttribute(
+              paymentState.filters.fromDatetime
+            )}"
+          />
+        </div>
+
+        <div class="ktms-payment-filter">
+          <label for="payment-to">To</label>
+
+          <input
+            id="payment-to"
+            type="datetime-local"
+            value="${escapeAttribute(
+              paymentState.filters.toDatetime
+            )}"
+          />
+        </div>
+
+        <div class="ktms-payment-filter-action">
+          <button
+            type="button"
+            class="ktms-primary-button"
+            id="payment-apply-filters"
+          >
+            APPLY FILTERS
+          </button>
+        </div>
+
       </div>
-
-      <div class="ktms-table-wrap">
-        <table class="ktms-table ktms-payment-table">
-
-          <thead>
-            <tr>
-              <th>Payment Reference</th>
-              <th>Player</th>
-              <th>Tournament</th>
-              <th>Amount</th>
-              <th>Method</th>
-              <th>Status</th>
-              <th>Payment Date</th>
-              <th>Action</th>
-            </tr>
-          </thead>
-
-          <tbody>
-            ${transactions
-              .map(
-                renderTransactionRow
-              )
-              .join("")}
-          </tbody>
-
-        </table>
-      </div>
-
     </section>
   `;
-
-  bindTransactionButtons();
 }
 
-function renderTransactionRow(
-  transaction
-) {
-  const id = getValue(
-    transaction,
-    "transactionHistoryId",
-    "transaction_history_id"
-  );
+function bindPaymentFilters() {
+  const applyButton =
+    document.getElementById("payment-apply-filters");
 
-  const reference = getValue(
-    transaction,
-    "paymentReference",
-    "payment_reference"
-  );
+  if (applyButton) {
+    applyButton.addEventListener("click", async () => {
+      paymentState.filters.search =
+        getInputValue("payment-search");
 
-  const playerName =
-    getValue(
-      transaction,
-      "playerName",
-      "player_name"
-    ) ||
-    getValue(
-      transaction,
-      "playerId",
-      "player_id"
-    ) ||
-    "—";
+      paymentState.filters.paymentStatus =
+        getInputValue("payment-status");
 
-  const tournamentId =
-    getValue(
-      transaction,
-      "tournamentId",
-      "tournament_id"
-    );
+      paymentState.filters.paymentMethod =
+        getInputValue("payment-method");
 
-  const tournamentName =
-    getValue(
-      transaction,
-      "tournamentName",
-      "tournament_name"
-    );
+      paymentState.filters.paymentProvider =
+        getInputValue("payment-provider");
 
-  const amount =
-    toNumber(
-      getValue(
-        transaction,
-        "amount"
-      )
-    );
+      paymentState.filters.fromDatetime =
+        getInputValue("payment-from");
 
-  const currency =
-    getValue(
-      transaction,
-      "currency"
-    ) ||
-    "NGN";
+      paymentState.filters.toDatetime =
+        getInputValue("payment-to");
 
-  const method =
-    getValue(
-      transaction,
-      "paymentMethod",
-      "payment_method"
-    ) ||
-    "—";
+      await loadTournamentPayments();
+    });
+  }
 
-  const provider =
-    getValue(
-      transaction,
-      "paymentProvider",
-      "payment_provider"
-    );
+  const searchInput =
+    document.getElementById("payment-search");
 
-  const status =
-    getValue(
-      transaction,
-      "paymentStatus",
-      "payment_status"
-    ) ||
-    "—";
+  if (searchInput) {
+    searchInput.addEventListener("keydown", async (event) => {
+      if (event.key !== "Enter") {
+        return;
+      }
 
-  const paymentDate =
-    getValue(
-      transaction,
-      "paymentDatetime",
-      "payment_datetime"
-    );
+      paymentState.filters.search = searchInput.value.trim();
+
+      await loadTournamentPayments();
+    });
+  }
+
+  const statusSelect =
+    document.getElementById("payment-status");
+
+  if (statusSelect) {
+    statusSelect.value =
+      paymentState.filters.paymentStatus;
+  }
+
+  const methodSelect =
+    document.getElementById("payment-method");
+
+  if (methodSelect) {
+    methodSelect.value =
+      paymentState.filters.paymentMethod;
+  }
+
+  const providerSelect =
+    document.getElementById("payment-provider");
+
+  if (providerSelect) {
+    providerSelect.value =
+      paymentState.filters.paymentProvider;
+  }
+}
+
+function renderTransactions() {
+  const transactions = paymentState.transactions;
+
+  if (!transactions.length) {
+    return `
+      <div class="ktms-empty-state">
+        <strong>No payment transactions</strong>
+        No payment transactions match the current filters
+        for this tournament.
+      </div>
+    `;
+  }
+
+  return `
+    <div class="ktms-table-wrap">
+
+      <table class="ktms-table ktms-payment-table">
+
+        <thead>
+          <tr>
+            <th>Payment Reference</th>
+            <th>Player</th>
+            <th>Tournament</th>
+            <th>Amount</th>
+            <th>Method</th>
+            <th>Status</th>
+            <th>Payment Date</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+
+        <tbody>
+          ${transactions
+            .map(renderTransactionRow)
+            .join("")}
+        </tbody>
+
+      </table>
+
+    </div>
+  `;
+}
+
+function renderTransactionRow(transaction) {
+  const transactionId =
+    transaction.transactionHistoryId ||
+    transaction.transaction_history_id ||
+    "";
 
   return `
     <tr>
 
       <td>
-        <strong class="ktms-payment-reference">
+        <span class="ktms-payment-reference">
           ${escapeHtml(
-            reference || "—"
+            transaction.paymentReference || "—"
           )}
-        </strong>
+        </span>
 
         ${
-          provider
-            ? `
-              <span class="ktms-payment-provider">
-                ${escapeHtml(provider)}
-              </span>
-            `
-            : ""
-        }
-      </td>
-
-      <td>
-        ${escapeHtml(playerName)}
-      </td>
-
-      <td>
-        <strong>
-          ${escapeHtml(
-            tournamentId || "—"
-          )}
-        </strong>
-
-        ${
-          tournamentName
+          transaction.transactionId
             ? `
               <span class="ktms-payment-secondary-text">
-                ${escapeHtml(
-                  tournamentName
-                )}
+                ${escapeHtml(transaction.transactionId)}
               </span>
             `
             : ""
@@ -749,35 +623,58 @@ function renderTransactionRow(
 
       <td>
         <strong>
-          ${escapeHtml(
-            formatMoney(
-              amount,
-              currency
-            )
-          )}
+          ${escapeHtml(transaction.playerName || "—")}
         </strong>
+
+        ${
+          transaction.playerId
+            ? `
+              <span class="ktms-payment-secondary-text">
+                ${escapeHtml(transaction.playerId)}
+              </span>
+            `
+            : ""
+        }
       </td>
 
       <td>
-        ${escapeHtml(method)}
-      </td>
+        ${escapeHtml(transaction.tournamentName || "—")}
 
-      <td>
-        ${paymentStatusBadge(status)}
+        <span class="ktms-payment-secondary-text">
+          ${escapeHtml(transaction.tournamentId || "")}
+        </span>
       </td>
 
       <td>
         ${escapeHtml(
-          formatDateTime(paymentDate)
+          formatMoney(transaction.amount)
+        )}
+      </td>
+
+      <td>
+        ${escapeHtml(
+          formatStatus(transaction.paymentMethod)
+        )}
+      </td>
+
+      <td>
+        ${paymentStatusBadge(
+          transaction.paymentStatus
+        )}
+      </td>
+
+      <td>
+        ${escapeHtml(
+          formatDateTime(transaction.paymentDatetime)
         )}
       </td>
 
       <td>
         <button
-          class="ktms-secondary-button ktms-payment-view-button"
           type="button"
-          data-payment-id="${escapeAttribute(
-            id || ""
+          class="ktms-secondary-button ktms-payment-view-button"
+          data-transaction-id="${escapeAttribute(
+            transactionId
           )}"
         >
           VIEW
@@ -789,333 +686,100 @@ function renderTransactionRow(
 }
 
 function bindTransactionButtons() {
-  document
-    .querySelectorAll(
-      ".ktms-payment-view-button"
-    )
-    .forEach((button) => {
-      button.addEventListener(
-        "click",
-        async () => {
-          const id =
-            button.dataset.paymentId;
+  const buttons = document.querySelectorAll(
+    ".ktms-payment-view-button"
+  );
 
-          if (!id) {
-            showMessage(
-              "This transaction has no transaction history ID.",
-              "error"
-            );
+  buttons.forEach((button) => {
+    button.addEventListener("click", async () => {
+      const transactionId =
+        button.dataset.transactionId;
 
-            return;
-          }
+      if (!transactionId) {
+        return;
+      }
 
-          await loadPaymentDetail(id);
-        }
-      );
+      await loadPaymentDetail(transactionId);
     });
+  });
 }
 
-async function loadPaymentDetail(
-  transactionHistoryId
-) {
-  const section =
-    document.getElementById(
-      "payment-detail-section"
-    );
+async function loadPaymentDetail(transactionId) {
+  const container = document.getElementById(
+    "payment-detail-container"
+  );
 
-  if (!section) return;
+  if (!container) {
+    return;
+  }
 
-  section.hidden = false;
-
-  section.innerHTML = `
-    <div class="ktms-detail-card">
+  container.innerHTML = `
+    <section class="ktms-payment-detail-section">
       <div class="ktms-loading-state">
         Loading payment details...
       </div>
-    </div>
+    </section>
   `;
 
-  section.scrollIntoView({
-    behavior: "smooth",
-    block: "start"
-  });
-
   try {
-    const data = await adminApi(
-      "payment.detail",
-      {
-        transactionHistoryId
-      }
-    );
+    const result = await adminApi("payment.detail", {
+      transactionHistoryId: transactionId
+    });
 
     paymentState.selectedTransaction =
-      data;
+      result?.transaction ||
+      result?.payment ||
+      result?.data ||
+      result;
 
-    renderPaymentDetail(data);
+    renderPaymentDetail();
   } catch (error) {
-    section.innerHTML = `
-      <div class="ktms-error-state">
-        <strong>
-          Unable to load payment
-        </strong>
-
-        <p>
-          ${escapeHtml(
-            error?.message ||
-            "Unable to load payment details."
-          )}
-        </p>
-
-        <button
-          id="payment-detail-close-error"
-          class="ktms-secondary-button"
-          type="button"
-        >
-          CLOSE
-        </button>
-      </div>
+    container.innerHTML = `
+      <section class="ktms-payment-detail-section">
+        <div class="ktms-error-state">
+          Unable to load payment details.
+          ${escapeHtml(error?.message || "")}
+        </div>
+      </section>
     `;
-
-    const closeButton =
-      document.getElementById(
-        "payment-detail-close-error"
-      );
-
-    if (closeButton) {
-      closeButton.addEventListener(
-        "click",
-        closePaymentDetail
-      );
-    }
   }
 }
 
-function renderPaymentDetail(
-  transaction
-) {
-  const section =
-    document.getElementById(
-      "payment-detail-section"
-    );
+function renderPaymentDetail() {
+  const container = document.getElementById(
+    "payment-detail-container"
+  );
 
-  if (!section) return;
+  const payment = paymentState.selectedTransaction;
 
-  const reference =
-    getValue(
-      transaction,
-      "paymentReference",
-      "payment_reference"
-    ) ||
-    "—";
-
-  const status =
-    getValue(
-      transaction,
-      "paymentStatus",
-      "payment_status"
-    ) ||
-    "—";
-
-  const method =
-    getValue(
-      transaction,
-      "paymentMethod",
-      "payment_method"
-    ) ||
-    "—";
-
-  const provider =
-    getValue(
-      transaction,
-      "paymentProvider",
-      "payment_provider"
-    ) ||
-    "—";
-
-  const amount =
-    toNumber(
-      getValue(
-        transaction,
-        "amount"
-      )
-    );
-
-  const currency =
-    getValue(
-      transaction,
-      "currency"
-    ) ||
-    "NGN";
-
-  const transactionId =
-    getValue(
-      transaction,
-      "transactionId",
-      "transaction_id"
-    ) ||
-    "—";
-
-  const playerId =
-    getValue(
-      transaction,
-      "playerId",
-      "player_id"
-    ) ||
-    "—";
-
-  const playerName =
-    getValue(
-      transaction,
-      "playerName",
-      "player_name"
-    ) ||
-    "—";
-
-  const tournamentId =
-    getValue(
-      transaction,
-      "tournamentId",
-      "tournament_id"
-    ) ||
-    "—";
-
-  const tournamentName =
-    getValue(
-      transaction,
-      "tournamentName",
-      "tournament_name"
-    ) ||
-    "";
-
-  const paymentDate =
-    getValue(
-      transaction,
-      "paymentDatetime",
-      "payment_datetime"
-    );
-
-  const createdDate =
-    getValue(
-      transaction,
-      "createdDatetime",
-      "created_datetime"
-    );
-
-  const verifiedDate =
-    getValue(
-      transaction,
-      "verifiedDatetime",
-      "verified_datetime"
-    );
-
-  const providerStatus =
-    getValue(
-      transaction,
-      "providerStatus",
-      "provider_status"
-    ) ||
-    "—";
-
-  const paymentNote =
-    getValue(
-      transaction,
-      "paymentNote",
-      "payment_note"
-    ) ||
-    "";
-
-  const paymentProof =
-    getValue(
-      transaction,
-      "paymentProofUrl",
-      "payment_proof_url"
-    ) ||
-    "";
+  if (!container || !payment) {
+    return;
+  }
 
   const registration =
-    transaction?.registrationRequest ||
-    transaction?.registration_request ||
-    null;
+    payment.registrationRequest || {};
 
-  const registrationId =
-    getValue(
-      transaction,
-      "registrationReferenceId",
-      "registration_reference_id"
-    ) ||
-    getValue(
-      registration,
-      "requestId",
-      "request_id"
-    ) ||
-    "—";
-
-  const registrationStatus =
-    getValue(
-      registration,
-      "requestStatus",
-      "request_status"
-    ) ||
-    "—";
-
-  const squadName =
-    getValue(
-      registration,
-      "squadName",
-      "squad_name"
-    ) ||
-    "—";
-
-  const registrationFee =
-    toNumber(
-      getValue(
-        registration,
-        "registrationFee",
-        "registration_fee"
-      )
-    );
-
-  const submittedDate =
-    getValue(
-      registration,
-      "paymentSubmittedDatetime",
-      "payment_submitted_datetime"
-    );
-
-  const registrationVerifiedDate =
-    getValue(
-      registration,
-      "paymentVerifiedDatetime",
-      "payment_verified_datetime"
-    );
-
-  const canVerifyBank =
-    isBankTransfer(method, provider) &&
-    isAwaitingVerification(status);
-
-  section.innerHTML = `
-    <div class="ktms-detail-card">
+  container.innerHTML = `
+    <section class="ktms-payment-detail-section">
 
       <div class="ktms-payment-detail-header">
 
         <div>
-          <span class="ktms-payment-detail-eyebrow">
-            PAYMENT DETAIL
-          </span>
+          <div class="ktms-payment-detail-eyebrow">
+            Payment Detail
+          </div>
 
           <h3>
-            ${escapeHtml(reference)}
+            ${escapeHtml(
+              payment.paymentReference || "Payment"
+            )}
           </h3>
-
-          <div>
-            ${paymentStatusBadge(status)}
-          </div>
         </div>
 
         <button
-          id="payment-detail-close"
-          class="ktms-secondary-button"
           type="button"
+          class="ktms-secondary-button"
+          id="payment-detail-close"
         >
           CLOSE
         </button>
@@ -1125,180 +789,199 @@ function renderPaymentDetail(
       <div class="ktms-payment-detail-grid">
 
         ${detailItem(
+          "Status",
+          paymentStatusBadge(payment.paymentStatus)
+        )}
+
+        ${detailItem(
           "Player",
-          playerName
+          escapeHtml(payment.playerName || "—")
         )}
 
         ${detailItem(
           "Player ID",
-          playerId
+          escapeHtml(payment.playerId || "—")
         )}
 
         ${detailItem(
           "Tournament",
-          tournamentId
+          escapeHtml(payment.tournamentName || "—")
         )}
 
         ${detailItem(
-          "Tournament Name",
-          tournamentName || "—"
+          "Tournament ID",
+          escapeHtml(payment.tournamentId || "—")
         )}
 
         ${detailItem(
           "Registration",
-          registrationId
-        )}
-
-        ${detailItem(
-          "Squad",
-          squadName
-        )}
-
-        ${detailItem(
-          "Registration Status",
-          registrationStatus
-        )}
-
-        ${detailItem(
-          "Payment Method",
-          method
-        )}
-
-        ${detailItem(
-          "Provider",
-          provider
-        )}
-
-        ${detailItem(
-          "Amount",
-          formatMoney(
-            amount,
-            currency
+          escapeHtml(
+            payment.registrationReferenceId ||
+              registration.requestId ||
+              "—"
           )
         )}
 
         ${detailItem(
+          "Squad",
+          escapeHtml(registration.squadName || "—")
+        )}
+
+        ${detailItem(
+          "Registration Status",
+          escapeHtml(
+            formatStatus(
+              registration.requestStatus
+            )
+          )
+        )}
+
+        ${detailItem(
+          "Payment Method",
+          escapeHtml(
+            formatStatus(payment.paymentMethod)
+          )
+        )}
+
+        ${detailItem(
+          "Payment Provider",
+          escapeHtml(
+            formatStatus(payment.paymentProvider)
+          )
+        )}
+
+        ${detailItem(
+          "Amount",
+          escapeHtml(formatMoney(payment.amount))
+        )}
+
+        ${detailItem(
           "Expected Registration Fee",
-          registrationFee
-            ? formatMoney(
-                registrationFee,
-                currency
-              )
-            : "—"
+          escapeHtml(
+            formatMoney(registration.registrationFee)
+          )
         )}
 
         ${detailItem(
           "Transaction ID",
-          transactionId
+          escapeHtml(payment.transactionId || "—")
         )}
 
         ${detailItem(
           "Provider Status",
-          providerStatus
+          escapeHtml(payment.providerStatus || "—")
         )}
 
         ${detailItem(
           "Created",
-          formatDateTime(
-            createdDate
+          escapeHtml(
+            formatDateTime(payment.createdDatetime)
           )
         )}
 
         ${detailItem(
           "Payment Date",
-          formatDateTime(
-            paymentDate
+          escapeHtml(
+            formatDateTime(payment.paymentDatetime)
           )
         )}
 
         ${detailItem(
           "Verified",
-          formatDateTime(
-            verifiedDate
+          escapeHtml(
+            formatDateTime(payment.verifiedDatetime)
           )
         )}
 
         ${detailItem(
-          "Submitted",
-          formatDateTime(
-            submittedDate
+          "Payment Submitted",
+          escapeHtml(
+            formatDateTime(
+              registration.paymentSubmittedDatetime
+            )
           )
         )}
 
         ${detailItem(
           "Registration Payment Verified",
-          formatDateTime(
-            registrationVerifiedDate
+          escapeHtml(
+            formatDateTime(
+              registration.paymentVerifiedDatetime
+            )
           )
         )}
 
       </div>
 
       ${
-        paymentNote
+        payment.paymentNote
           ? `
             <div class="ktms-payment-detail-note">
-              <strong>Payment Note</strong>
-              <p>
-                ${escapeHtml(paymentNote)}
-              </p>
+              <div class="ktms-payment-detail-note-label">
+                Payment Note
+              </div>
+
+              <div class="ktms-payment-detail-note-content">
+                ${escapeHtml(payment.paymentNote)}
+              </div>
             </div>
           `
           : ""
       }
 
       ${
-        paymentProof
+        payment.paymentProofUrl
           ? `
-            <div class="ktms-payment-proof">
-              <strong>Payment Proof</strong>
+            <div class="ktms-payment-detail-note">
+              <div class="ktms-payment-detail-note-label">
+                Payment Proof
+              </div>
 
-              <p>
-                <a
-                  href="${escapeAttribute(
-                    paymentProof
-                  )}"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  OPEN PAYMENT PROOF
-                </a>
-              </p>
+              <a
+                class="ktms-payment-proof"
+                href="${escapeAttribute(
+                  payment.paymentProofUrl
+                )}"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                VIEW PAYMENT PROOF
+              </a>
             </div>
           `
           : ""
       }
 
       ${
-        canVerifyBank
+        isBankTransfer(payment) &&
+        isAwaitingVerification(payment)
           ? `
             <div class="ktms-payment-verification-panel">
 
-              <div>
-                <h4>
-                  Bank Transfer Verification
-                </h4>
+              <h4>
+                Bank Transfer Verification
+              </h4>
 
-                <p>
-                  This payment is awaiting manual
-                  verification.
-                </p>
-              </div>
+              <p>
+                This bank transfer is awaiting manual verification.
+                Approval or rejection will be processed by the
+                KTMS payment core.
+              </p>
 
               <div class="ktms-payment-verification-actions">
 
                 <button
-                  id="payment-approve-bank"
-                  class="ktms-primary-button"
                   type="button"
+                  class="ktms-primary-button"
+                  id="payment-approve-transfer"
                 >
                   APPROVE TRANSFER
                 </button>
 
                 <button
-                  id="payment-reject-bank"
-                  class="ktms-danger-button"
                   type="button"
+                  class="ktms-danger-button"
+                  id="payment-reject-transfer"
                 >
                   REJECT TRANSFER
                 </button>
@@ -1310,13 +993,15 @@ function renderPaymentDetail(
           : ""
       }
 
-    </div>
+    </section>
   `;
 
+  bindDetailButtons();
+}
+
+function bindDetailButtons() {
   const closeButton =
-    document.getElementById(
-      "payment-detail-close"
-    );
+    document.getElementById("payment-detail-close");
 
   if (closeButton) {
     closeButton.addEventListener(
@@ -1325,74 +1010,46 @@ function renderPaymentDetail(
     );
   }
 
-  if (canVerifyBank) {
-    const approveButton =
-      document.getElementById(
-        "payment-approve-bank"
-      );
+  const approveButton = document.getElementById(
+    "payment-approve-transfer"
+  );
 
-    const rejectButton =
-      document.getElementById(
-        "payment-reject-bank"
-      );
+  if (approveButton) {
+    approveButton.addEventListener("click", async () => {
+      await verifyBankTransfer("APPROVE");
+    });
+  }
 
-    if (approveButton) {
-      approveButton.addEventListener(
-        "click",
-        async () => {
-          await verifyBankTransfer(
-            transaction,
-            "APPROVE"
-          );
-        }
-      );
-    }
+  const rejectButton = document.getElementById(
+    "payment-reject-transfer"
+  );
 
-    if (rejectButton) {
-      rejectButton.addEventListener(
-        "click",
-        async () => {
-          await verifyBankTransfer(
-            transaction,
-            "REJECT"
-          );
-        }
-      );
-    }
+  if (rejectButton) {
+    rejectButton.addEventListener("click", async () => {
+      await verifyBankTransfer("REJECT");
+    });
   }
 }
 
-async function verifyBankTransfer(
-  transaction,
-  decision
-) {
-  const transactionId =
-    getValue(
-      transaction,
-      "transactionHistoryId",
-      "transaction_history_id"
-    );
+async function verifyBankTransfer(decision) {
+  const payment =
+    paymentState.selectedTransaction;
 
-  const paymentReference =
-    getValue(
-      transaction,
-      "paymentReference",
-      "payment_reference"
-    );
-
-  if (!transactionId) {
-    showMessage(
-      "Transaction history ID is missing.",
-      "error"
-    );
-
+  if (!payment) {
     return;
   }
 
-  const action =
-    decision === "APPROVE"
-      ? "approve"
-      : "reject";
+  const transactionId =
+    payment.transactionHistoryId ||
+    payment.transaction_history_id;
+
+  if (!transactionId) {
+    showMessage(
+      "Payment transaction ID is missing.",
+      "error"
+    );
+    return;
+  }
 
   const reason = window.prompt(
     decision === "APPROVE"
@@ -1400,53 +1057,31 @@ async function verifyBankTransfer(
       : "Enter the reason for rejecting this bank transfer:"
   );
 
-  if (reason === null) {
+  if (!reason || !reason.trim()) {
     return;
   }
 
-  const trimmedReason =
-    reason.trim();
-
-  if (!trimmedReason) {
-    showMessage(
-      "A reason is required.",
-      "error"
-    );
-
-    return;
-  }
-
-  const confirmed =
-    window.confirm(
-      decision === "APPROVE"
-        ? `Approve bank transfer ${paymentReference || transactionId}?`
-        : `Reject bank transfer ${paymentReference || transactionId}?`
-    );
+  const confirmed = window.confirm(
+    decision === "APPROVE"
+      ? "Approve this bank transfer?"
+      : "Reject this bank transfer?"
+  );
 
   if (!confirmed) {
     return;
   }
 
+  setVerificationButtonsDisabled(true);
+
   try {
-    setVerificationButtonsDisabled(
-      true
-    );
-
-    await adminApi(
-      "payment.verifyBank",
-      {
-        transactionHistoryId:
-          transactionId,
-
-        decision:
-          decision === "APPROVE"
-            ? "APPROVED"
-            : "REJECTED",
-
-        reason:
-          trimmedReason
-      }
-    );
+    await adminApi("payment.verifyBank", {
+      transactionHistoryId: transactionId,
+      decision:
+        decision === "APPROVE"
+          ? "APPROVED"
+          : "REJECTED",
+      reason: reason.trim()
+    });
 
     showMessage(
       decision === "APPROVE"
@@ -1455,332 +1090,273 @@ async function verifyBankTransfer(
       "success"
     );
 
-    closePaymentDetail();
+    paymentState.selectedTransaction = null;
 
-    await loadPayments();
+    await loadTournamentPayments();
   } catch (error) {
-    setVerificationButtonsDisabled(
-      false
-    );
-
     showMessage(
       error?.message ||
-      "Unable to update bank transfer.",
+        "Unable to process bank transfer verification.",
       "error"
     );
+
+    setVerificationButtonsDisabled(false);
   }
 }
 
-function setVerificationButtonsDisabled(
-  disabled
-) {
-  [
-    "payment-approve-bank",
-    "payment-reject-bank"
-  ].forEach((id) => {
-    const button =
-      document.getElementById(id);
+function setVerificationButtonsDisabled(disabled) {
+  const approveButton = document.getElementById(
+    "payment-approve-transfer"
+  );
 
-    if (button) {
-      button.disabled =
-        disabled;
-    }
-  });
+  const rejectButton = document.getElementById(
+    "payment-reject-transfer"
+  );
+
+  if (approveButton) {
+    approveButton.disabled = disabled;
+  }
+
+  if (rejectButton) {
+    rejectButton.disabled = disabled;
+  }
 }
 
 function closePaymentDetail() {
-  const section =
-    document.getElementById(
-      "payment-detail-section"
-    );
+  const container = document.getElementById(
+    "payment-detail-container"
+  );
 
-  if (!section) return;
+  if (container) {
+    container.innerHTML = "";
+  }
 
-  section.hidden = true;
-  section.innerHTML = "";
-  paymentState.selectedTransaction =
-    null;
+  paymentState.selectedTransaction = null;
 }
 
-function detailItem(
-  label,
-  value
-) {
-  return `
-    <div class="ktms-payment-detail-item">
+function renderUnselectedTournament() {
+  const content = document.getElementById(
+    "payment-content"
+  );
 
-      <span>
-        ${escapeHtml(label)}
-      </span>
+  if (!content) {
+    return;
+  }
 
-      <strong>
-        ${escapeHtml(
-          value || "—"
-        )}
-      </strong>
-
+  content.innerHTML = `
+    <div class="ktms-empty-state">
+      <strong>Select a tournament</strong>
+      Choose a KT tournament above to view its payment activity.
     </div>
   `;
 }
 
-function paymentStatusBadge(
-  status
-) {
-  const normalized =
-    String(
-      status || ""
-    )
-      .trim()
-      .toUpperCase();
+function normalizeSummary(result) {
+  return (
+    result?.summary ||
+    result?.data ||
+    result || {
+      transactionCount: 0,
+      successfulCount: 0,
+      pendingCount: 0,
+      failedCount: 0,
+      refundedCount: 0,
+      successfulAmount: 0,
+      pendingAmount: 0,
+      failedAmount: 0
+    }
+  );
+}
 
-  let className =
-    "ktms-status";
+function normalizeTransactions(result) {
+  const rows =
+    result?.transactions ||
+    result?.payments ||
+    result?.data ||
+    result?.items ||
+    result ||
+    [];
+
+  return Array.isArray(rows) ? rows : [];
+}
+
+function paymentStatusBadge(status) {
+  const normalized = String(status || "")
+    .trim()
+    .toUpperCase();
+
+  let className = "ktms-status";
 
   if (
+    normalized === "SUCCESSFUL" ||
     normalized === "SUCCESS"
   ) {
-    className +=
-      " ktms-status-active";
+    className += " ktms-status-active";
+  } else if (
+    normalized === "FAILED" ||
+    normalized === "REJECTED"
+  ) {
+    className += " ktms-status-failed";
   } else if (
     normalized === "PENDING" ||
-    normalized ===
-      "AWAITING_VERIFICATION"
+    normalized === "AWAITING_VERIFICATION"
   ) {
-    className +=
-      " ktms-status-suspended";
-  } else if (
-    normalized === "FAILED"
-  ) {
-    className +=
-      " ktms-status-failed";
-  } else if (
-    normalized === "REFUNDED"
-  ) {
-    className +=
-      " ktms-status-registration-closed";
+    className += " ktms-status-suspended";
   }
 
   return `
     <span class="${className}">
-      ${escapeHtml(
-        formatStatus(normalized)
-      )}
+      ${escapeHtml(formatStatus(status))}
     </span>
   `;
 }
 
-function isBankTransfer(
-  method,
-  provider
-) {
-  const values = [
-    method,
-    provider
-  ]
-    .filter(Boolean)
-    .map((value) =>
-      String(value)
-        .trim()
-        .toLowerCase()
-    );
+function isBankTransfer(payment) {
+  const method = String(
+    payment?.paymentMethod || ""
+  ).toUpperCase();
 
-  return values.includes(
-    "bank transfer"
+  const provider = String(
+    payment?.paymentProvider || ""
+  ).toUpperCase();
+
+  return (
+    method.includes("BANK") ||
+    provider.includes("BANK")
   );
 }
 
-function isAwaitingVerification(
-  status
-) {
+function isAwaitingVerification(payment) {
+  const status = String(
+    payment?.paymentStatus || ""
+  ).toUpperCase();
+
   return (
-    String(status || "")
-      .trim()
-      .toUpperCase() ===
-    "AWAITING_VERIFICATION"
+    status === "AWAITING_VERIFICATION" ||
+    status === "AWAITING VERIFICATION"
   );
+}
+
+function detailItem(label, value) {
+  return `
+    <div class="ktms-payment-detail-item">
+      <div class="ktms-payment-detail-item-label">
+        ${escapeHtml(label)}
+      </div>
+
+      <div class="ktms-payment-detail-item-value">
+        ${value}
+      </div>
+    </div>
+  `;
 }
 
 function getInputValue(id) {
-  const element =
-    document.getElementById(id);
+  const element = document.getElementById(id);
 
   return element
     ? element.value.trim()
     : "";
 }
 
-function normalizeDatetime(
-  value
-) {
-  if (!value) return null;
-
-  const date =
-    new Date(value);
-
-  if (
-    Number.isNaN(
-      date.getTime()
-    )
-  ) {
+function normalizeDatetime(value) {
+  if (!value) {
     return null;
   }
 
-  return date.toISOString();
-}
-
-function getValue(
-  object,
-  ...keys
-) {
-  if (!object) return "";
-
-  for (const key of keys) {
-    if (
-      object[key] !== undefined &&
-      object[key] !== null
-    ) {
-      return object[key];
-    }
-  }
-
-  return "";
+  return new Date(value).toISOString();
 }
 
 function toNumber(value) {
-  const number =
-    Number(value);
+  const number = Number(value);
 
-  return Number.isFinite(
-    number
-  )
+  return Number.isFinite(number)
     ? number
     : 0;
 }
 
 function formatNumber(value) {
-  return new Intl.NumberFormat(
-    "en-NG"
-  ).format(
+  return new Intl.NumberFormat("en-NG").format(
     toNumber(value)
   );
 }
 
-function formatMoney(
-  amount,
-  currency = "NGN"
-) {
-  return new Intl.NumberFormat(
-    "en-NG",
-    {
-      style: "currency",
-      currency:
-        currency || "NGN",
-      maximumFractionDigits: 2
-    }
-  ).format(
-    toNumber(amount)
-  );
+function formatMoney(value) {
+  const amount = toNumber(value);
+
+  return new Intl.NumberFormat("en-NG", {
+    style: "currency",
+    currency: "NGN",
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  }).format(amount);
 }
 
-function formatDateTime(
-  value
-) {
-  if (!value) return "—";
-
-  const date =
-    new Date(value);
-
-  if (
-    Number.isNaN(
-      date.getTime()
-    )
-  ) {
+function formatDateTime(value) {
+  if (!value) {
     return "—";
   }
 
-  return new Intl.DateTimeFormat(
-    "en-NG",
-    {
-      dateStyle: "medium",
-      timeStyle: "short"
-    }
-  ).format(date);
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return String(value);
+  }
+
+  return new Intl.DateTimeFormat("en-NG", {
+    dateStyle: "medium",
+    timeStyle: "short"
+  }).format(date);
 }
 
-function formatStatus(
-  status
-) {
-  if (!status) return "Unknown";
+function formatStatus(value) {
+  if (!value) {
+    return "—";
+  }
 
-  return String(status)
-    .toLowerCase()
-    .replaceAll("_", " ")
-    .replace(/\b\w/g, (char) =>
-      char.toUpperCase()
+  return String(value)
+    .replace(/_/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .replace(/\b\w/g, (character) =>
+      character.toUpperCase()
     );
 }
 
-function emptyState(
-  title,
-  message
-) {
-  return `
-    <div class="ktms-empty-state">
-      <h3>
-        ${escapeHtml(title)}
-      </h3>
+function showMessage(message, type = "info") {
+  const element =
+    document.getElementById("payment-message");
 
-      <p>
-        ${escapeHtml(message)}
-      </p>
-    </div>
-  `;
+  if (!element) {
+    return;
+  }
+
+  element.textContent = message;
+  element.className =
+    `ktms-message is-visible ktms-message-${type}`;
 }
 
-function showMessage(
-  text,
-  type = "info"
-) {
-  const message =
-    document.getElementById(
-      "payments-message"
-    );
+function clearMessage() {
+  const element =
+    document.getElementById("payment-message");
 
-  if (!message) return;
+  if (!element) {
+    return;
+  }
 
-  message.textContent =
-    text;
-
-  message.className =
-    `ktms-message ktms-message-${type}`;
+  element.textContent = "";
+  element.className = "ktms-message";
 }
 
 function escapeHtml(value) {
-  return String(value)
-    .replaceAll(
-      "&",
-      "&amp;"
-    )
-    .replaceAll(
-      "<",
-      "&lt;"
-    )
-    .replaceAll(
-      ">",
-      "&gt;"
-    )
-    .replaceAll(
-      '"',
-      "&quot;"
-    )
-    .replaceAll(
-      "'",
-      "&#039;"
-    );
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
 }
 
-function escapeAttribute(
-  value
-) {
+function escapeAttribute(value) {
   return escapeHtml(value);
 }
