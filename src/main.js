@@ -3,10 +3,10 @@ import { supabase } from "./lib/supabase.js";
 
 import {
   sendVerificationCode,
-  verifyVerificationCode,
-  startAdminSession,
+  completeAdminLogin,
   getCurrentSession,
   getAdminIdentity,
+  startAdminSession,
   logout
 } from "./auth/auth.js";
 
@@ -14,18 +14,117 @@ import {
   adminApi,
   clearAdminSessionToken
 } from "./api/admin-api.js";
-import { getCurrentRoute, startRouter } from "./app/router.js";
-import { renderAppShell, renderRoute } from "./app/app.js";
 
-const app = document.getElementById("app");
+import {
+  getCurrentRoute,
+  startRouter
+} from "./app/router.js";
+
+import {
+  renderAppShell,
+  renderRoute
+} from "./app/app.js";
+
+const app =
+  document.getElementById("app");
 
 if (!app) {
-  throw new Error("KTMS Admin: #app root element was not found.");
+  throw new Error(
+    "KTMS Admin: #app root element was not found."
+  );
 }
+
+/* =========================================================
+   LOGIN STATUS
+   ========================================================= */
+
+const LOGIN_STATUS = {
+  VERIFIED: "VERIFIED",
+  UNAUTHORIZED: "UNAUTHORIZED",
+  FAILED: "FAILED"
+};
+
+/* =========================================================
+   BUTTON LOADING STATE
+   ========================================================= */
+
+function setButtonLoading(
+  button,
+  loading,
+  text
+) {
+  if (!button) return;
+
+  if (loading) {
+    button.disabled = true;
+
+    button.dataset.originalText =
+      button.innerHTML;
+
+    button.innerHTML = `
+      <span class="ktms-login-spinner"
+            aria-hidden="true"></span>
+      <span>${text}</span>
+    `;
+
+    return;
+  }
+
+  button.disabled = false;
+
+  if (
+    button.dataset.originalText
+  ) {
+    button.innerHTML =
+      button.dataset.originalText;
+
+    delete button.dataset.originalText;
+  }
+}
+
+/* =========================================================
+   LOGIN STATUS DISPLAY
+   ========================================================= */
+
+function setLoginStatus(
+  status
+) {
+  const message =
+    document.getElementById(
+      "login-msg"
+    );
+
+  if (!message) return;
+
+  message.dataset.status =
+    status.toLowerCase();
+
+  message.textContent =
+    status;
+}
+
+function clearLoginStatus() {
+  const message =
+    document.getElementById(
+      "login-msg"
+    );
+
+  if (!message) return;
+
+  message.textContent = "";
+  message.removeAttribute(
+    "data-status"
+  );
+}
+
+/* =========================================================
+   LOGIN PAGE
+   ========================================================= */
 
 function renderLogin() {
   app.innerHTML = `
     <main class="ktms-login">
+
       <div class="ktms-login-orbit ktms-login-orbit-one"></div>
       <div class="ktms-login-orbit ktms-login-orbit-two"></div>
 
@@ -53,12 +152,14 @@ function renderLogin() {
           </p>
 
           <div class="ktms-login-authority">
+
             <div class="ktms-login-authority-indicator"></div>
 
             <div>
               <strong>Protected Operations</strong>
               <span>Core-authoritative administration</span>
             </div>
+
           </div>
 
         </div>
@@ -83,7 +184,10 @@ function renderLogin() {
 
           </div>
 
-          <p class="ktms-login-description" id="login-description">
+          <p
+            class="ktms-login-description"
+            id="login-description"
+          >
             Enter your administrator email to receive a verification code.
           </p>
 
@@ -92,9 +196,18 @@ function renderLogin() {
             <span>SECURE EMAIL VERIFICATION</span>
           </div>
 
-          <div id="login-msg" class="ktms-message" aria-live="polite"></div>
+          <div
+            id="login-msg"
+            class="ktms-message"
+            aria-live="polite"
+          ></div>
 
-          <form id="email-form" class="ktms-login-form">
+          <!-- EMAIL -->
+
+          <form
+            id="email-form"
+            class="ktms-login-form"
+          >
 
             <div class="ktms-login-field">
 
@@ -103,7 +216,10 @@ function renderLogin() {
               </label>
 
               <div class="ktms-login-input-wrap">
-                <span class="ktms-input-icon">@</span>
+
+                <span class="ktms-input-icon">
+                  @
+                </span>
 
                 <input
                   id="email"
@@ -112,6 +228,7 @@ function renderLogin() {
                   placeholder="administrator@example.com"
                   required
                 />
+
               </div>
 
             </div>
@@ -122,12 +239,20 @@ function renderLogin() {
               class="ktms-login-primary"
             >
               <span>CONTINUE</span>
-              <span class="ktms-login-button-arrow">→</span>
+              <span class="ktms-login-button-arrow">
+                →
+              </span>
             </button>
 
           </form>
 
-          <form id="otp-form" class="ktms-login-form" hidden>
+          <!-- OTP -->
+
+          <form
+            id="otp-form"
+            class="ktms-login-form"
+            hidden
+          >
 
             <div class="ktms-login-field">
 
@@ -136,7 +261,10 @@ function renderLogin() {
               </label>
 
               <div class="ktms-login-input-wrap">
-                <span class="ktms-input-icon">#</span>
+
+                <span class="ktms-input-icon">
+                  #
+                </span>
 
                 <input
                   id="otp"
@@ -147,16 +275,20 @@ function renderLogin() {
                   placeholder="Enter verification code"
                   required
                 />
+
               </div>
 
             </div>
 
             <button
+              id="verify-code"
               type="submit"
               class="ktms-login-primary"
             >
               <span>VERIFY & ENTER</span>
-              <span class="ktms-login-button-arrow">→</span>
+              <span class="ktms-login-button-arrow">
+                →
+              </span>
             </button>
 
             <button
@@ -170,171 +302,292 @@ function renderLogin() {
           </form>
 
           <div class="ktms-login-footer">
+
             <span>KTMS</span>
+
             <span class="ktms-login-footer-separator"></span>
+
             <span>AUTHORIZED ACCESS ONLY</span>
+
           </div>
 
         </section>
 
       </section>
+
     </main>
   `;
 
-  const emailForm = document.getElementById("email-form");
-  const otpForm = document.getElementById("otp-form");
-  const emailInput = document.getElementById("email");
-  const otpInput = document.getElementById("otp");
-  const message = document.getElementById("login-msg");
-  const backButton = document.getElementById("back-to-email");
-
-  emailForm.addEventListener("submit", async (event) => {
-    event.preventDefault();
-
-    message.textContent = "Sending verification code...";
-
-    try {
-      await sendVerificationCode(emailInput.value);
-
-      emailForm.hidden = true;
-      otpForm.hidden = false;
-
-      message.textContent =
-        "Verification code sent. Check your email.";
-
-      otpInput.focus();
-    } catch (error) {
-      console.error("KTMS login code error:", error);
-
-      message.textContent =
-        error?.message || "Unable to send verification code.";
-    }
-  });
-
- otpForm.addEventListener(
-  "submit",
-  async (event) => {
-    event.preventDefault();
-
-    const email =
-      emailInput.value
-        .trim()
-        .toLowerCase();
-
-    const otp =
-      otpInput.value
-        .trim();
-
-    if (!email) {
-      message.textContent =
-        "Administrator email is required.";
-
-      return;
-    }
-
-    if (!otp) {
-      message.textContent =
-        "Verification code is required.";
-
-      return;
-    }
-
-    const verifyButton =
-      otpForm.querySelector(
-        "button[type=\"submit\"]"
-      );
-
-    if (verifyButton) {
-      verifyButton.disabled = true;
-    }
-
-    message.textContent =
-      "Verifying administrator authentication...";
-
-    try {
-      /*
-       * STEP 1
-       * Verify the Supabase Auth OTP.
-       */
-      await verifyVerificationCode(
-        email,
-        otp
-      );
-
-      message.textContent =
-        "Authentication successful. Establishing secure administrator session...";
-
-
-      /*
-       * STEP 2
-       * Exchange the authenticated Supabase
-       * identity for the KTMS administrator session.
-       */
-      await startAdminSession();
-
-
-      /*
-       * STEP 3
-       * Verify the KTMS administrator identity
-       * through the authenticated Admin API.
-       */
-      const admin =
-        await getAdminIdentity();
-
-      message.textContent =
-        "Administrator authentication successful.";
-
-
-      /*
-       * STEP 4
-       * Render the administrative application.
-       */
-      await renderAdminShell(
-        admin
-      );
-
-    } catch (error) {
-      console.error(
-        "KTMS administrator login failed:",
-        error
-      );
-
-      const code =
-        error?.code ||
-        "UNKNOWN_ERROR";
-
-      const text =
-        error?.message ||
-        "Unable to complete administrator authentication.";
-
-      message.textContent =
-        `LOGIN FAILED: ${code} — ${text}`;
-
-      /*
-       * Do not leave a stale KTMS session token
-       * after a failed login attempt.
-       */
-      clearAdminSessionToken();
-
-    } finally {
-      if (verifyButton) {
-        verifyButton.disabled = false;
-      }
-    }
-  }
-);
-
-  backButton.addEventListener("click", () => {
-    otpForm.hidden = true;
-    emailForm.hidden = false;
-    otpInput.value = "";
-    message.textContent = "";
-    emailInput.focus();
-  });
+  setupLoginHandlers();
 }
 
+/* =========================================================
+   LOGIN HANDLERS
+   ========================================================= */
+
+function setupLoginHandlers() {
+  const emailForm =
+    document.getElementById(
+      "email-form"
+    );
+
+  const otpForm =
+    document.getElementById(
+      "otp-form"
+    );
+
+  const emailInput =
+    document.getElementById(
+      "email"
+    );
+
+  const otpInput =
+    document.getElementById(
+      "otp"
+    );
+
+  const sendButton =
+    document.getElementById(
+      "send-code"
+    );
+
+  const verifyButton =
+    document.getElementById(
+      "verify-code"
+    );
+
+  const backButton =
+    document.getElementById(
+      "back-to-email"
+    );
+
+  /* =======================================================
+     REQUEST OTP
+     ======================================================= */
+
+  emailForm.addEventListener(
+    "submit",
+    async (event) => {
+      event.preventDefault();
+
+      const email =
+        emailInput.value
+          .trim()
+          .toLowerCase();
+
+      if (!email) {
+        setLoginStatus(
+          LOGIN_STATUS.FAILED
+        );
+
+        return;
+      }
+
+      clearLoginStatus();
+
+      setButtonLoading(
+        sendButton,
+        true,
+        "SENDING"
+      );
+
+      try {
+        await sendVerificationCode(
+          email
+        );
+
+        emailForm.hidden = true;
+        otpForm.hidden = false;
+
+        clearLoginStatus();
+
+        otpInput.focus();
+
+      } catch (error) {
+        console.error(
+          "KTMS verification request failed:",
+          error
+        );
+
+        /*
+         * Deliberately expose only the
+         * permitted user-facing state.
+         */
+        setLoginStatus(
+          isUnauthorizedError(error)
+            ? LOGIN_STATUS.UNAUTHORIZED
+            : LOGIN_STATUS.FAILED
+        );
+
+      } finally {
+        setButtonLoading(
+          sendButton,
+          false
+        );
+      }
+    }
+  );
+
+  /* =======================================================
+     VERIFY OTP
+     ======================================================= */
+
+  otpForm.addEventListener(
+    "submit",
+    async (event) => {
+      event.preventDefault();
+
+      const email =
+        emailInput.value
+          .trim()
+          .toLowerCase();
+
+      const token =
+        otpInput.value
+          .trim();
+
+      if (!email || !token) {
+        setLoginStatus(
+          LOGIN_STATUS.FAILED
+        );
+
+        return;
+      }
+
+      clearLoginStatus();
+
+      setButtonLoading(
+        verifyButton,
+        true,
+        "VERIFYING"
+      );
+
+      try {
+        /*
+         * Complete authentication:
+         *
+         * backend OTP verification
+         *        ↓
+         * Supabase session
+         *        ↓
+         * KTMS admin session
+         *        ↓
+         * admin.me
+         */
+        const admin =
+          await completeAdminLogin(
+            email,
+            token
+          );
+
+        console.info(
+          "KTMS administrator verified:",
+          admin
+        );
+
+        setLoginStatus(
+          LOGIN_STATUS.VERIFIED
+        );
+
+        /*
+         * Give the user a brief visible
+         * confirmation before entering.
+         */
+        await wait(350);
+
+        await renderAdminShell(
+          admin
+        );
+
+      } catch (error) {
+        console.error(
+          "KTMS administrator login failed:",
+          error
+        );
+
+        /*
+         * Never expose backend error details
+         * to the administrator.
+         */
+        clearAdminSessionToken();
+
+        try {
+          await supabase.auth.signOut();
+        } catch (signOutError) {
+          console.warn(
+            "KTMS login cleanup warning:",
+            signOutError
+          );
+        }
+
+        setLoginStatus(
+          isUnauthorizedError(error)
+            ? LOGIN_STATUS.UNAUTHORIZED
+            : LOGIN_STATUS.FAILED
+        );
+
+      } finally {
+        setButtonLoading(
+          verifyButton,
+          false
+        );
+      }
+    }
+  );
+
+  /* =======================================================
+     CHANGE EMAIL
+     ======================================================= */
+
+  backButton.addEventListener(
+    "click",
+    () => {
+      otpForm.hidden = true;
+      emailForm.hidden = false;
+
+      otpInput.value = "";
+
+      clearLoginStatus();
+
+      emailInput.focus();
+    }
+  );
+}
+
+/* =========================================================
+   ERROR CLASSIFICATION
+   ========================================================= */
+
+function isUnauthorizedError(
+  error
+) {
+  const status =
+    Number(error?.status);
+
+  const code =
+    String(error?.code || "")
+      .toUpperCase();
+
+  return (
+    status === 401 ||
+    status === 403 ||
+    code === "ADMIN_ACCESS_DENIED" ||
+    code === "IDENTITY_MISMATCH" ||
+    code === "INVALID_SESSION" ||
+    code === "OTP_VERIFICATION_FAILED" ||
+    code === "SUPABASE_AUTH_REQUIRED" ||
+    code === "AUTH_SESSION_FAILED" ||
+    code === "AUTH_SESSION_MISSING"
+  );
+}
+
+/* =========================================================
+   AUTHENTICATE EXISTING SESSION
+   ========================================================= */
+
 async function authenticate() {
-  const session = await getCurrentSession();
+  const session =
+    await getCurrentSession();
 
   if (!session) {
     renderLogin();
@@ -342,93 +595,88 @@ async function authenticate() {
   }
 
   try {
-    const admin = await getAdminIdentity();
+    const admin =
+      await getAdminIdentity();
 
-    await renderAdminShell(admin);
+    await renderAdminShell(
+      admin
+    );
+
   } catch (error) {
     console.error(
-      "KTMS administrator authentication failed:",
+      "KTMS existing session authentication failed:",
       error
     );
 
-    /*
-     * A valid Supabase session without a valid
-     * KTMS administrator session must establish
-     * a fresh KTMS session before retrying.
-     */
-    if (
-      error?.code === "KTMS_SESSION_REQUIRED" ||
-      error?.code === "SESSION_EXPIRED" ||
-      error?.code === "SESSION_REJECTED" ||
-      error?.code === "ADMIN_SESSION_REQUIRED"
-    ) {
-      try {
-        await startAdminSession();
+    clearAdminSessionToken();
 
-        const admin =
-          await getAdminIdentity();
-
-        await renderAdminShell(admin);
-
-        return;
-      } catch (retryError) {
-        console.error(
-          "KTMS administrator session recovery failed:",
-          retryError
-        );
-
-        const message =
-          document.getElementById("login-msg");
-
-        if (message) {
-          message.textContent =
-            `ADMIN AUTHENTICATION FAILED: ${
-              retryError?.code || "UNKNOWN_ERROR"
-            } — ${
-              retryError?.message ||
-              "Unable to establish administrator session."
-            }`;
-        }
-
-        return;
-      }
+    try {
+      await supabase.auth.signOut();
+    } catch (signOutError) {
+      console.warn(
+        "KTMS session cleanup warning:",
+        signOutError
+      );
     }
 
-    const message =
-      document.getElementById("login-msg");
-
-    if (message) {
-      message.textContent =
-        `ADMIN AUTHENTICATION FAILED: ${
-          error?.code || "UNKNOWN_ERROR"
-        } — ${
-          error?.message ||
-          "Unknown error"
-        }`;
-    }
+    renderLogin();
   }
 }
-async function renderAdminShell(admin) {
-  const route = getCurrentRoute();
 
-  const page = renderAppShell(
-    app,
-    admin,
-    route
+/* =========================================================
+   ADMIN APPLICATION
+   ========================================================= */
+
+async function renderAdminShell(
+  admin
+) {
+  const route =
+    getCurrentRoute();
+
+  const page =
+    renderAppShell(
+      app,
+      admin,
+      route
+    );
+
+  const logoutButton =
+    document.getElementById(
+      "logout-button"
+    );
+
+  if (logoutButton) {
+    logoutButton.addEventListener(
+      "click",
+      async () => {
+        try {
+          await logout();
+        } catch (error) {
+          console.error(
+            "KTMS administrator logout failed:",
+            error
+          );
+        }
+
+        renderLogin();
+      }
+    );
+  }
+
+  await renderRoute(
+    page,
+    route,
+    admin
   );
-
-  document
-    .getElementById("logout-button")
-    .addEventListener("click", async () => {
-      await logout();
-      renderLogin();
-    });
-
-  await renderRoute(page, route, admin);
 }
 
+/* =========================================================
+   ROUTE CHANGE
+   ========================================================= */
+
 async function handleRouteChange() {
-  const session = await getCurrentSession();
+  const session =
+    await getCurrentSession();
 
   if (!session) {
     renderLogin();
@@ -436,21 +684,51 @@ async function handleRouteChange() {
   }
 
   try {
-    const admin = await getAdminIdentity();
-    await renderAdminShell(admin);
-  } catch (error) {
-    console.error("KTMS route authentication failed:", error);
+    const admin =
+      await getAdminIdentity();
 
-    await logout();
+    await renderAdminShell(
+      admin
+    );
+
+  } catch (error) {
+    console.error(
+      "KTMS route authentication failed:",
+      error
+    );
+
+    clearAdminSessionToken();
+
+    try {
+      await supabase.auth.signOut();
+    } catch (signOutError) {
+      console.warn(
+        "KTMS route cleanup warning:",
+        signOutError
+      );
+    }
+
     renderLogin();
   }
 }
 
+/* =========================================================
+   DASHBOARD
+   ========================================================= */
+
 async function loadDashboard() {
-  const target = document.getElementById("dashboard-status");
+  const target =
+    document.getElementById(
+      "dashboard-status"
+    );
+
+  if (!target) return;
 
   try {
-    const data = await adminApi("dashboard.summary");
+    const data =
+      await adminApi(
+        "dashboard.summary"
+      );
 
     target.innerHTML = `
       <div class="ktms-dashboard-grid">
@@ -494,27 +772,51 @@ async function loadDashboard() {
     `;
 
   } catch (error) {
-    console.error("KTMS dashboard error:", error);
+    console.error(
+      "KTMS dashboard error:",
+      error
+    );
 
     target.textContent =
-      error?.message || "Unable to load dashboard.";
+      "FAILED";
   }
 }
 
-function escapeHtml(value) {
-  return String(value)
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
+/* =========================================================
+   UTILITY
+   ========================================================= */
+
+function wait(
+  milliseconds
+) {
+  return new Promise(
+    (resolve) =>
+      setTimeout(
+        resolve,
+        milliseconds
+      )
+  );
 }
 
-supabase.auth.onAuthStateChange((_event, session) => {
-  if (!session) {
-    renderLogin();
-  }
-});
+/* =========================================================
+   SUPABASE AUTH STATE
+   ========================================================= */
 
-startRouter(handleRouteChange);
+supabase.auth.onAuthStateChange(
+  (_event, session) => {
+    if (!session) {
+      clearAdminSessionToken();
+      renderLogin();
+    }
+  }
+);
+
+/* =========================================================
+   START APPLICATION
+   ========================================================= */
+
+startRouter(
+  handleRouteChange
+);
+
 authenticate();
