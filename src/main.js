@@ -10,7 +10,10 @@ import {
   logout
 } from "./auth/auth.js";
 
-import { adminApi } from "./api/admin-api.js";
+import {
+  adminApi,
+  clearAdminSessionToken
+} from "./api/admin-api.js";
 import { getCurrentRoute, startRouter } from "./app/router.js";
 import { renderAppShell, renderRoute } from "./app/app.js";
 
