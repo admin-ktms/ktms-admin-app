@@ -14,6 +14,9 @@ import { renderAwards } from "../modules/awards/awards.js";
 import {
   renderNotifications
 } from "../modules/notifications/notifications.js";
+import {
+  renderSupport
+} from "../modules/support/support.js";
 
 const navigation = [
   ["dashboard", "Dashboard", "/dashboard"],
@@ -179,6 +182,10 @@ export async function renderRoute(page, route, admin) {
     if (route === "notifications") {
     return renderNotifications(content, admin);
   }
+
+  if (route === "support") {
+  return renderSupport(content, admin);
+}
 
   content.innerHTML = `
     <div class="ktms-empty-state">
