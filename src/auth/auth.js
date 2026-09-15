@@ -1,139 +1,105 @@
 import { supabase } from "../lib/supabase.js";
 
 import {
-  adminApi,
   requestAdminVerificationCode,
+  verifyAdminVerificationCode,
+  establishSupabaseSession,
+  adminApi,
   getStoredAdminSessionToken,
   storeAdminSessionToken,
   clearAdminSessionToken
 } from "../api/admin-api.js";
 
-
 /* =========================================================
-   REQUEST ADMIN VERIFICATION CODE
+   REQUEST VERIFICATION CODE
    ========================================================= */
 
-export async function sendVerificationCode(
-  email
-) {
-  const normalizedEmail =
-    String(email || "")
-      .trim()
-      .toLowerCase();
+export async function sendVerificationCode(email) {
+  const normalizedEmail = String(email || "")
+    .trim()
+    .toLowerCase();
 
   if (!normalizedEmail) {
     const error = new Error(
       "Email address is required."
     );
 
-    error.code =
-      "EMAIL_REQUIRED";
+    error.code = "EMAIL_REQUIRED";
 
     throw error;
   }
 
-  await requestAdminVerificationCode(
+  return await requestAdminVerificationCode(
     normalizedEmail
   );
-
-  return true;
 }
 
-
 /* =========================================================
-   VERIFY SUPABASE AUTH OTP
+   VERIFY ADMIN LOGIN
    ========================================================= */
 
+/**
+ * Complete authentication sequence:
+ *
+ * 1. Backend verifies OTP.
+ * 2. Backend returns Supabase Auth tokens.
+ * 3. Browser installs those tokens.
+ * 4. Browser now has a genuine Supabase Auth session.
+ */
 export async function verifyVerificationCode(
   email,
   token
 ) {
-  const normalizedEmail =
-    String(email || "")
-      .trim()
-      .toLowerCase();
+  const normalizedEmail = String(email || "")
+    .trim()
+    .toLowerCase();
 
-  const normalizedToken =
-    String(token || "")
-      .trim();
+  const normalizedToken = String(token || "")
+    .trim();
 
   if (!normalizedEmail) {
-    throw new Error(
+    const error = new Error(
       "Email address is required."
     );
-  }
 
-  if (!normalizedToken) {
-    throw new Error(
-      "Verification code is required."
-    );
-  }
+    error.code = "EMAIL_REQUIRED";
 
-  const {
-    data,
-    error
-  } = await supabase.auth.verifyOtp({
-    email:
-      normalizedEmail,
-
-    token:
-      normalizedToken,
-
-    type:
-      "email"
-  });
-
-  if (error) {
     throw error;
   }
 
-  if (!data?.session?.access_token) {
-    throw new Error(
-      "Authentication succeeded but no Supabase Auth session was created."
+  if (!normalizedToken) {
+    const error = new Error(
+      "Verification code is required."
     );
+
+    error.code = "OTP_REQUIRED";
+
+    throw error;
   }
 
-  /*
-   * Confirm that the Supabase client can see
-   * the authenticated session that will be used
-   * by the KTMS Admin API.
-   */
-  const {
-    data: {
-      session
-    },
-    error: sessionError
-  } =
-    await supabase.auth.getSession();
-
-  if (sessionError) {
-    throw sessionError;
-  }
-
-  if (!session?.access_token) {
-    throw new Error(
-      "Supabase authentication completed, but the browser session is unavailable."
+  const loginData =
+    await verifyAdminVerificationCode(
+      normalizedEmail,
+      normalizedToken
     );
-  }
 
-  return session;
+  const session =
+    await establishSupabaseSession(
+      loginData
+    );
+
+  return {
+    session,
+    admin: loginData.admin,
+    userId: loginData.userId
+  };
 }
-
 
 /* =========================================================
    CREATE KTMS ADMIN SESSION
    ========================================================= */
 
 export async function startAdminSession() {
-  /*
-   * admin.session.start requires:
-   *
-   * Authorization: Bearer <Supabase Auth access token>
-   *
-   * It does NOT require an existing
-   * X-KTMS-Admin-Session header because it is
-   * responsible for creating that session.
-   */
   const data =
     await adminApi(
       "admin.session.start"
@@ -143,9 +109,14 @@ export async function startAdminSession() {
     data?.sessionToken;
 
   if (!sessionToken) {
-    throw new Error(
+    const error = new Error(
       "KTMS administrator session was not created."
     );
+
+    error.code =
+      "KTMS_SESSION_CREATE_FAILED";
+
+    throw error;
   }
 
   storeAdminSessionToken(
@@ -154,7 +125,6 @@ export async function startAdminSession() {
 
   return data;
 }
-
 
 /* =========================================================
    CURRENT SUPABASE SESSION
@@ -166,8 +136,7 @@ export async function getCurrentSession() {
       session
     },
     error
-  } =
-    await supabase.auth.getSession();
+  } = await supabase.auth.getSession();
 
   if (error) {
     throw error;
@@ -176,9 +145,8 @@ export async function getCurrentSession() {
   return session;
 }
 
-
 /* =========================================================
-   CURRENT KTMS ADMIN IDENTITY
+   CURRENT ADMIN IDENTITY
    ========================================================= */
 
 export async function getAdminIdentity() {
@@ -187,6 +155,47 @@ export async function getAdminIdentity() {
   );
 }
 
+/* =========================================================
+   COMPLETE LOGIN
+   ========================================================= */
+
+export async function completeAdminLogin(
+  email,
+  token
+) {
+  /*
+   * STEP 1
+   * Backend verifies OTP and returns
+   * Supabase Auth credentials.
+   */
+  const authentication =
+    await verifyVerificationCode(
+      email,
+      token
+    );
+
+  /*
+   * STEP 2
+   * Supabase Auth session is now installed
+   * in the browser.
+   */
+
+  /*
+   * STEP 3
+   * Exchange Supabase identity for the
+   * KTMS administrator session.
+   */
+  await startAdminSession();
+
+  /*
+   * STEP 4
+   * Ask the protected Admin API who we are.
+   */
+  const admin =
+    await getAdminIdentity();
+
+  return admin;
+}
 
 /* =========================================================
    LOGOUT
@@ -213,8 +222,7 @@ export async function logout() {
 
   const {
     error
-  } =
-    await supabase.auth.signOut();
+  } = await supabase.auth.signOut();
 
   if (error) {
     throw error;
