@@ -208,31 +208,118 @@ function renderLogin() {
     }
   });
 
-  otpForm.addEventListener("submit", async (event) => {
+ otpForm.addEventListener(
+  "submit",
+  async (event) => {
     event.preventDefault();
 
-    message.textContent = "Verifying...";
+    const email =
+      emailInput.value
+        .trim()
+        .toLowerCase();
+
+    const otp =
+      otpInput.value
+        .trim();
+
+    if (!email) {
+      message.textContent =
+        "Administrator email is required.";
+
+      return;
+    }
+
+    if (!otp) {
+      message.textContent =
+        "Verification code is required.";
+
+      return;
+    }
+
+    const verifyButton =
+      otpForm.querySelector(
+        "button[type=\"submit\"]"
+      );
+
+    if (verifyButton) {
+      verifyButton.disabled = true;
+    }
+
+    message.textContent =
+      "Verifying administrator authentication...";
 
     try {
+      /*
+       * STEP 1
+       * Verify the Supabase Auth OTP.
+       */
       await verifyVerificationCode(
-  emailInput.value,
-  otpInput.value
-);
-
-message.textContent =
-  "Authentication successful. Establishing secure administrator session...";
-
-await startAdminSession();
-
-await authenticate();
-
-    } catch (error) {
-      console.error("KTMS OTP verification error:", error);
+        email,
+        otp
+      );
 
       message.textContent =
-        error?.message || "Verification failed.";
+        "Authentication successful. Establishing secure administrator session...";
+
+
+      /*
+       * STEP 2
+       * Exchange the authenticated Supabase
+       * identity for the KTMS administrator session.
+       */
+      await startAdminSession();
+
+
+      /*
+       * STEP 3
+       * Verify the KTMS administrator identity
+       * through the authenticated Admin API.
+       */
+      const admin =
+        await getAdminIdentity();
+
+      message.textContent =
+        "Administrator authentication successful.";
+
+
+      /*
+       * STEP 4
+       * Render the administrative application.
+       */
+      await renderAdminShell(
+        admin
+      );
+
+    } catch (error) {
+      console.error(
+        "KTMS administrator login failed:",
+        error
+      );
+
+      const code =
+        error?.code ||
+        "UNKNOWN_ERROR";
+
+      const text =
+        error?.message ||
+        "Unable to complete administrator authentication.";
+
+      message.textContent =
+        `LOGIN FAILED: ${code} — ${text}`;
+
+      /*
+       * Do not leave a stale KTMS session token
+       * after a failed login attempt.
+       */
+      clearAdminSessionToken();
+
+    } finally {
+      if (verifyButton) {
+        verifyButton.disabled = false;
+      }
     }
-  });
+  }
+);
 
   backButton.addEventListener("click", () => {
     otpForm.hidden = true;
