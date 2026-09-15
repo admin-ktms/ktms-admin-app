@@ -441,7 +441,7 @@ async function authenticate() {
 
     applicationReady = true;
 
-    renderAdminShell(admin);
+    await renderAdminShell(admin);
 
     return true;
   } catch (error) {
@@ -465,7 +465,6 @@ async function authenticate() {
 }
 
 // ADMIN SHELL
-
 async function renderAdminShell(admin) {
   const route = getCurrentRoute();
 
@@ -485,11 +484,64 @@ async function renderAdminShell(admin) {
     );
   }
 
-  await renderRoute(
-    page,
-    route,
-    admin
-  );
+  try {
+    await renderRoute(
+      page,
+      route,
+      admin
+    );
+  } catch (error) {
+    console.error(
+      `KTMS ${route} module rendering failed:`,
+      error
+    );
+
+    renderModuleError(
+      page,
+      route,
+      error
+    );
+  }
+}
+
+function renderModuleError(page, route, error) {
+  if (!page) {
+    return;
+  }
+
+  const message =
+    error?.message ||
+    "An unexpected module error occurred.";
+
+  page.innerHTML = `
+    <div class="ktms-error-card">
+      <strong>
+        Unable to load ${escapeHtml(
+          route || "this module"
+        )}.
+      </strong>
+
+      <p>
+        ${escapeHtml(message)}
+      </p>
+
+      <button
+        id="ktms-module-retry"
+        class="ktms-secondary-button"
+        type="button"
+      >
+        RETRY
+      </button>
+    </div>
+  `;
+
+  document
+    .getElementById("ktms-module-retry")
+    ?.addEventListener("click", async () => {
+      const admin = await getAdminIdentity();
+
+      await renderAdminShell(admin);
+    });
 }
 
 // ROUTING
