@@ -2440,7 +2440,7 @@ function getTournamentName(tournament) {
     tournament?.tournament_name ??
     tournament?.tournamentName ??
     tournament?.name ??
-    getTournamentId(tournament) ||
+    getTournamentId(tournament) ??
     "—"
   );
 }
