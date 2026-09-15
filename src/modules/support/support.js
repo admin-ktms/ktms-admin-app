@@ -19,6 +19,7 @@ const STATUS_OPTIONS = [
   "Closed"
 ];
 
+
 const TYPE_OPTIONS = [
   "Support",
   "Dispute",
@@ -53,7 +54,40 @@ export async function renderSupport(page, admin) {
   state.admin = admin;
 
   page.innerHTML = `
-    ...
+    <div class="ktms-module">
+
+      <div class="ktms-module-toolbar">
+
+        <div>
+          <h2>Support</h2>
+
+          <p>
+            Manage player support cases, disputes and appeals.
+            All case communications and decisions remain auditable.
+          </p>
+        </div>
+
+        <button
+          id="support-refresh"
+          class="ktms-secondary-button"
+          type="button"
+        >
+          REFRESH
+        </button>
+
+      </div>
+
+      <div
+        id="support-message"
+        class="ktms-message"
+        aria-live="polite"
+      ></div>
+
+      <div id="support-content">
+        Loading...
+      </div>
+
+    </div>
   `;
 
   bindToolbarEvents();
@@ -65,9 +99,16 @@ export async function renderSupport(page, admin) {
 function bindToolbarEvents() {
   document
     .getElementById("support-refresh")
-    ?.addEventListener("click", async () => {
-      await loadCases();
-    });
+    ?.addEventListener(
+      "click",
+      async () => {
+        if (state.loading) {
+          return;
+        }
+
+        await loadCases();
+      }
+    );
 }
 
 
@@ -76,22 +117,29 @@ function bindToolbarEvents() {
    ========================================================= */
 
 async function loadCases() {
-  setMessage("Loading support cases...", "info");
+  setMessage(
+    "Loading support cases...",
+    "info"
+  );
 
   try {
     state.loading = true;
 
-    const result = await getSupportCases(
-      state.filters
-    );
+    const result =
+      await getSupportCases(
+        state.filters
+      );
 
-    state.cases = normalizeRows(result);
+    state.cases =
+      normalizeRows(result);
 
     renderWorkspace();
 
     setMessage(
       `${state.cases.length} support case${
-        state.cases.length === 1 ? "" : "s"
+        state.cases.length === 1
+          ? ""
+          : "s"
       } loaded.`,
       "success"
     );
@@ -105,11 +153,14 @@ async function loadCases() {
     state.cases = [];
 
     const content =
-      document.getElementById("support-content");
+      document.getElementById(
+        "support-content"
+      );
 
     if (content) {
       content.innerHTML = `
         <div class="ktms-error-card">
+
           <strong>
             Unable to load support cases.
           </strong>
@@ -120,6 +171,7 @@ async function loadCases() {
               "An unexpected error occurred."
             )}
           </p>
+
         </div>
       `;
     }
@@ -142,9 +194,13 @@ async function loadCases() {
 
 function renderWorkspace() {
   const content =
-    document.getElementById("support-content");
+    document.getElementById(
+      "support-content"
+    );
 
-  if (!content) return;
+  if (!content) {
+    return;
+  }
 
   content.innerHTML = `
     <div class="ktms-support-workspace">
@@ -187,7 +243,9 @@ function renderFilters() {
 
         <label class="ktms-form-field">
 
-          <span>Search</span>
+          <span>
+            Search
+          </span>
 
           <input
             id="support-search"
@@ -203,9 +261,13 @@ function renderFilters() {
 
         <label class="ktms-form-field">
 
-          <span>Status</span>
+          <span>
+            Status
+          </span>
 
-          <select id="support-status-filter">
+          <select
+            id="support-status-filter"
+          >
 
             <option value="">
               All statuses
@@ -215,14 +277,19 @@ function renderFilters() {
               .map(
                 (status) => `
                   <option
-                    value="${escapeAttribute(status)}"
+                    value="${escapeAttribute(
+                      status
+                    )}"
                     ${
-                      state.filters.filter === status
+                      state.filters.filter ===
+                      status
                         ? "selected"
                         : ""
                     }
                   >
-                    ${escapeHtml(status)}
+                    ${escapeHtml(
+                      status
+                    )}
                   </option>
                 `
               )
@@ -235,9 +302,13 @@ function renderFilters() {
 
         <label class="ktms-form-field">
 
-          <span>Case Type</span>
+          <span>
+            Case Type
+          </span>
 
-          <select id="support-type-filter">
+          <select
+            id="support-type-filter"
+          >
 
             <option value="">
               All types
@@ -247,14 +318,19 @@ function renderFilters() {
               .map(
                 (type) => `
                   <option
-                    value="${escapeAttribute(type)}"
+                    value="${escapeAttribute(
+                      type
+                    )}"
                     ${
-                      state.filters.caseType === type
+                      state.filters.caseType ===
+                      type
                         ? "selected"
                         : ""
                     }
                   >
-                    ${escapeHtml(type)}
+                    ${escapeHtml(
+                      type
+                    )}
                   </option>
                 `
               )
@@ -267,7 +343,9 @@ function renderFilters() {
 
         <label class="ktms-form-field">
 
-          <span>Category</span>
+          <span>
+            Category
+          </span>
 
           <input
             id="support-category-filter"
@@ -310,46 +388,66 @@ function renderFilters() {
 
 function bindFilterEvents() {
   document
-    .getElementById("support-apply-filters")
-    ?.addEventListener("click", async () => {
+    .getElementById(
+      "support-apply-filters"
+    )
+    ?.addEventListener(
+      "click",
+      async () => {
 
-      state.filters.search =
-        document.getElementById(
-          "support-search"
-        )?.value.trim() || "";
+        state.filters.search =
+          document
+            .getElementById(
+              "support-search"
+            )
+            ?.value
+            .trim() || "";
 
-      state.filters.filter =
-        document.getElementById(
-          "support-status-filter"
-        )?.value || "";
+        state.filters.filter =
+          document
+            .getElementById(
+              "support-status-filter"
+            )
+            ?.value || "";
 
-      state.filters.caseType =
-        document.getElementById(
-          "support-type-filter"
-        )?.value || "";
+        state.filters.caseType =
+          document
+            .getElementById(
+              "support-type-filter"
+            )
+            ?.value || "";
 
-      state.filters.caseCategory =
-        document.getElementById(
-          "support-category-filter"
-        )?.value.trim() || "";
+        state.filters.caseCategory =
+          document
+            .getElementById(
+              "support-category-filter"
+            )
+            ?.value
+            .trim() || "";
 
-      await loadCases();
-    });
+        await loadCases();
+      }
+    );
 
 
   document
-    .getElementById("support-reset-filters")
-    ?.addEventListener("click", async () => {
+    .getElementById(
+      "support-reset-filters"
+    )
+    ?.addEventListener(
+      "click",
+      async () => {
 
-      state.filters = {
-        filter: "",
-        caseType: "",
-        caseCategory: "",
-        search: ""
-      };
+        state.filters = {
+          filter: "",
+          caseType: "",
+          caseCategory: "",
+          search: ""
+        };
 
-      await loadCases();
-    });
+        await loadCases();
+      }
+    );
 }
 
 
@@ -362,7 +460,9 @@ function renderCaseList() {
     return `
       <div class="ktms-empty-state">
 
-        <h3>No support cases</h3>
+        <h3>
+          No support cases
+        </h3>
 
         <p>
           No cases match the current filters.
@@ -377,11 +477,15 @@ function renderCaseList() {
     <div class="ktms-card">
 
       <div class="ktms-support-list-header">
-        <h3>Cases</h3>
+
+        <h3>
+          Cases
+        </h3>
 
         <span>
           ${state.cases.length}
         </span>
+
       </div>
 
 
@@ -390,6 +494,7 @@ function renderCaseList() {
         <table class="ktms-table">
 
           <thead>
+
             <tr>
               <th>Case</th>
               <th>Player</th>
@@ -397,6 +502,7 @@ function renderCaseList() {
               <th>Status</th>
               <th>Modified</th>
             </tr>
+
           </thead>
 
           <tbody>
@@ -417,42 +523,55 @@ function renderCaseList() {
                   >
 
                     <td>
+
                       <strong>
                         ${escapeHtml(
-                          item.caseId || "—"
+                          item.caseId ||
+                          "—"
                         )}
                       </strong>
 
                       <div class="ktms-support-row-subtext">
                         ${escapeHtml(
-                          item.subject || "No subject"
+                          item.subject ||
+                          "No subject"
                         )}
                       </div>
+
                     </td>
 
+
                     <td>
+
                       ${escapeHtml(
-                        item.playerName || "—"
+                        item.playerName ||
+                        "—"
                       )}
 
                       <div class="ktms-support-row-subtext">
                         ${escapeHtml(
-                          item.playerId || ""
+                          item.playerId ||
+                          ""
                         )}
                       </div>
+
                     </td>
+
 
                     <td>
                       ${escapeHtml(
-                        item.caseType || "—"
+                        item.caseType ||
+                        "—"
                       )}
                     </td>
+
 
                     <td>
                       ${statusBadge(
                         item.status
                       )}
                     </td>
+
 
                     <td>
                       ${formatDate(
@@ -481,20 +600,34 @@ function bindCaseSelectionEvents() {
     .querySelectorAll(
       "[data-support-case-id]"
     )
-    .forEach((row) => {
+    .forEach(
+      (row) => {
 
-      row.addEventListener(
-        "click",
-        async () => {
+        row.addEventListener(
+          "click",
+          async () => {
 
-          const caseId =
-            row.dataset.supportCaseId;
+            if (
+              state.selectedCaseLoading
+            ) {
+              return;
+            }
 
-          await loadCase(caseId);
-        }
-      );
+            const caseId =
+              row.dataset.supportCaseId;
 
-    });
+            if (!caseId) {
+              return;
+            }
+
+            await loadCase(
+              caseId
+            );
+          }
+        );
+
+      }
+    );
 }
 
 
@@ -505,9 +638,13 @@ function bindCaseSelectionEvents() {
 function renderCaseDetail() {
   if (!state.selectedCase) {
     return `
-      <div class="ktms-card ktms-support-empty-detail">
+      <div
+        class="ktms-card ktms-support-empty-detail"
+      >
 
-        <h3>Select a case</h3>
+        <h3>
+          Select a case
+        </h3>
 
         <p>
           Select a support case from the list
@@ -520,7 +657,8 @@ function renderCaseDetail() {
   }
 
 
-  const item = state.selectedCase;
+  const item =
+    state.selectedCase;
 
   return `
     <div class="ktms-support-detail">
@@ -556,20 +694,24 @@ function renderCaseHeader(item) {
 
           <div class="ktms-support-case-id">
             ${escapeHtml(
-              item.caseId || "—"
+              item.caseId ||
+              "—"
             )}
           </div>
 
           <h3>
             ${escapeHtml(
-              item.subject || "Support Case"
+              item.subject ||
+              "Support Case"
             )}
           </h3>
 
         </div>
 
         <div>
-          ${statusBadge(item.status)}
+          ${statusBadge(
+            item.status
+          )}
         </div>
 
       </div>
@@ -589,7 +731,9 @@ function renderCaseHeader(item) {
 
         ${metaItem(
           "Created",
-          formatDate(item.createdDateTime)
+          formatDate(
+            item.createdDateTime
+          )
         )}
 
         ${metaItem(
@@ -613,7 +757,9 @@ function renderCaseContext(item) {
       <div class="ktms-section-header">
 
         <div>
-          <h3>Case Context</h3>
+          <h3>
+            Case Context
+          </h3>
         </div>
 
       </div>
@@ -624,7 +770,10 @@ function renderCaseContext(item) {
         ${metaItem(
           "Player",
           item.playerName
-            ? `${item.playerName} (${item.playerId || "—"})`
+            ? `${item.playerName} (${
+                item.playerId ||
+                "—"
+              })`
             : item.playerId
         )}
 
@@ -671,7 +820,11 @@ function renderPlayerDescription(item) {
     <div class="ktms-card">
 
       <div class="ktms-section-header">
-        <h3>Player Description</h3>
+
+        <h3>
+          Player Description
+        </h3>
+
       </div>
 
       <div class="ktms-support-description">
@@ -703,10 +856,15 @@ function renderMessages(item) {
       <div class="ktms-section-header">
 
         <div>
-          <h3>Communication</h3>
+
+          <h3>
+            Communication
+          </h3>
+
           <p>
             Permanent case communication history.
           </p>
+
         </div>
 
       </div>
@@ -746,7 +904,8 @@ function renderMessages(item) {
 
                       <div class="ktms-support-message-body">
                         ${escapeHtml(
-                          message.message || ""
+                          message.message ||
+                          ""
                         )}
                       </div>
 
@@ -823,10 +982,15 @@ function renderEvidence(item) {
       <div class="ktms-section-header">
 
         <div>
-          <h3>Evidence</h3>
+
+          <h3>
+            Evidence
+          </h3>
+
           <p>
             Evidence associated with this case.
           </p>
+
         </div>
 
       </div>
@@ -908,7 +1072,11 @@ function renderTimeline(item) {
     <div class="ktms-card">
 
       <div class="ktms-section-header">
-        <h3>Timeline</h3>
+
+        <h3>
+          Timeline
+        </h3>
+
       </div>
 
 
@@ -985,8 +1153,13 @@ function renderResolution(item) {
     <div class="ktms-card">
 
       <div class="ktms-section-header">
-        <h3>Resolution</h3>
+
+        <h3>
+          Resolution
+        </h3>
+
       </div>
+
 
       <div class="ktms-support-meta-grid">
 
@@ -1053,7 +1226,8 @@ function renderActions(item) {
   }
 
 
-  const status = item.status;
+  const status =
+    item.status;
 
 
   const canResolve =
@@ -1093,12 +1267,16 @@ function renderActions(item) {
       <div class="ktms-section-header">
 
         <div>
-          <h3>Case Actions</h3>
+
+          <h3>
+            Case Actions
+          </h3>
 
           <p>
             Business-domain decisions remain
             owned by their respective KTMS services.
           </p>
+
         </div>
 
       </div>
@@ -1174,10 +1352,14 @@ function renderActions(item) {
 
 function bindDetailEvents() {
   document
-    .getElementById("support-respond")
+    .getElementById(
+      "support-respond"
+    )
     ?.addEventListener(
       "click",
-      () => performResponse("respond")
+      () => performResponse(
+        "respond"
+      )
     );
 
 
@@ -1195,34 +1377,50 @@ function bindDetailEvents() {
 
 
   document
-    .getElementById("support-resolve")
+    .getElementById(
+      "support-resolve"
+    )
     ?.addEventListener(
       "click",
-      () => performDecision("resolve")
+      () =>
+        performDecision(
+          "resolve"
+        )
     );
 
 
   document
-    .getElementById("support-reject")
+    .getElementById(
+      "support-reject"
+    )
     ?.addEventListener(
       "click",
-      () => performDecision("reject")
+      () =>
+        performDecision(
+          "reject"
+        )
     );
 
 
   document
-    .getElementById("support-close")
+    .getElementById(
+      "support-close"
+    )
     ?.addEventListener(
       "click",
-      () => performClose()
+      () =>
+        performClose()
     );
 
 
   document
-    .getElementById("support-reopen")
+    .getElementById(
+      "support-reopen"
+    )
     ?.addEventListener(
       "click",
-      () => performReopen()
+      () =>
+        performReopen()
     );
 }
 
@@ -1232,18 +1430,29 @@ function bindDetailEvents() {
    ========================================================= */
 
 async function performResponse(action) {
-  if (!state.selectedCase) return;
+  if (
+    !state.selectedCase ||
+    state.actionLoading
+  ) {
+    return;
+  }
+
 
   const message =
-    document.getElementById(
-      "support-response-message"
-    )?.value.trim();
+    document
+      .getElementById(
+        "support-response-message"
+      )
+      ?.value
+      .trim();
+
 
   if (!message) {
     setMessage(
       "Enter a message before continuing.",
       "error"
     );
+
     return;
   }
 
@@ -1260,19 +1469,24 @@ async function performResponse(action) {
 
 
     if (action === "respond") {
+
       await respondToSupportCase(
         state.selectedCase.caseId,
         message
       );
+
     } else {
+
       await requestSupportInformation(
         state.selectedCase.caseId,
         message
       );
+
     }
 
 
     await refreshSelectedCase();
+
 
     setMessage(
       action === "respond"
@@ -1282,6 +1496,7 @@ async function performResponse(action) {
     );
 
   } catch (error) {
+
     console.error(
       "KTMS support response action failed:",
       error
@@ -1300,7 +1515,13 @@ async function performResponse(action) {
 
 
 async function performDecision(action) {
-  if (!state.selectedCase) return;
+  if (
+    !state.selectedCase ||
+    state.actionLoading
+  ) {
+    return;
+  }
+
 
   const resolution =
     window.prompt(
@@ -1308,6 +1529,7 @@ async function performDecision(action) {
         ? "Enter the resolution:"
         : "Enter the rejection resolution:"
     );
+
 
   if (!resolution?.trim()) {
     return;
@@ -1318,6 +1540,7 @@ async function performDecision(action) {
     window.prompt(
       "Enter the resolution explanation:"
     );
+
 
   if (!explanation?.trim()) {
     return;
@@ -1336,17 +1559,21 @@ async function performDecision(action) {
 
 
     if (action === "resolve") {
+
       await resolveSupportCase(
         state.selectedCase.caseId,
         resolution.trim(),
         explanation.trim()
       );
+
     } else {
+
       await rejectSupportCase(
         state.selectedCase.caseId,
         resolution.trim(),
         explanation.trim()
       );
+
     }
 
 
@@ -1362,6 +1589,7 @@ async function performDecision(action) {
     );
 
   } catch (error) {
+
     console.error(
       "KTMS support decision failed:",
       error
@@ -1380,7 +1608,12 @@ async function performDecision(action) {
 
 
 async function performClose() {
-  if (!state.selectedCase) return;
+  if (
+    !state.selectedCase ||
+    state.actionLoading
+  ) {
+    return;
+  }
 
 
   if (
@@ -1416,6 +1649,7 @@ async function performClose() {
     );
 
   } catch (error) {
+
     console.error(
       "KTMS support close failed:",
       error
@@ -1434,7 +1668,12 @@ async function performClose() {
 
 
 async function performReopen() {
-  if (!state.selectedCase) return;
+  if (
+    !state.selectedCase ||
+    state.actionLoading
+  ) {
+    return;
+  }
 
 
   const message =
@@ -1473,6 +1712,7 @@ async function performReopen() {
     );
 
   } catch (error) {
+
     console.error(
       "KTMS support reopen failed:",
       error
@@ -1495,6 +1735,10 @@ async function performReopen() {
    ========================================================= */
 
 async function loadCase(caseId) {
+  if (!caseId) {
+    return;
+  }
+
   try {
     state.selectedCaseLoading = true;
 
@@ -1505,7 +1749,9 @@ async function loadCase(caseId) {
 
 
     const result =
-      await getSupportCase(caseId);
+      await getSupportCase(
+        caseId
+      );
 
 
     state.selectedCase =
@@ -1521,6 +1767,7 @@ async function loadCase(caseId) {
     );
 
   } catch (error) {
+
     console.error(
       "KTMS support case detail load failed:",
       error
@@ -1539,7 +1786,9 @@ async function loadCase(caseId) {
 
 
 async function refreshSelectedCase() {
-  if (!state.selectedCase?.caseId) {
+  if (
+    !state.selectedCase?.caseId
+  ) {
     return;
   }
 
@@ -1549,7 +1798,9 @@ async function refreshSelectedCase() {
 
 
   const result =
-    await getSupportCase(caseId);
+    await getSupportCase(
+      caseId
+    );
 
 
   state.selectedCase =
@@ -1566,6 +1817,7 @@ async function refreshCaseListOnly() {
       state.filters
     );
 
+
   state.cases =
     normalizeRows(result);
 
@@ -1575,7 +1827,9 @@ async function refreshCaseListOnly() {
       "support-case-list"
     );
 
+
   if (list) {
+
     list.innerHTML =
       renderCaseList();
 
@@ -1607,22 +1861,29 @@ function normalizeRows(value) {
     return value;
   }
 
+
   if (Array.isArray(value?.data)) {
     return value.data;
   }
 
+
   if (Array.isArray(value?.rows)) {
     return value.rows;
   }
+
 
   return [];
 }
 
 
 function normalizeObject(value) {
-  if (value?.data && !Array.isArray(value.data)) {
+  if (
+    value?.data &&
+    !Array.isArray(value.data)
+  ) {
     return value.data;
   }
+
 
   return value || {};
 }
@@ -1667,6 +1928,7 @@ function statusBadge(status) {
     `;
   }
 
+
   return `
     <span
       class="ktms-support-status ktms-support-status-${slug(
@@ -1682,8 +1944,13 @@ function statusBadge(status) {
 function slug(value) {
   return String(value)
     .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-|-$/g, "");
+    .replace(
+      /[^a-z0-9]+/g,
+      "-"
+    )
+    .replace(
+      /^-|-$/g,
+      "");
 }
 
 
@@ -1692,16 +1959,21 @@ function formatDate(value) {
     return "—";
   }
 
+
   const date =
     new Date(value);
+
 
   if (
     Number.isNaN(
       date.getTime()
     )
   ) {
-    return escapeHtml(value);
+    return escapeHtml(
+      value
+    );
   }
+
 
   return escapeHtml(
     date.toLocaleString()
@@ -1709,16 +1981,24 @@ function formatDate(value) {
 }
 
 
-function setMessage(message, type = "info") {
+function setMessage(
+  message,
+  type = "info"
+) {
   const element =
     document.getElementById(
       "support-message"
     );
 
-  if (!element) return;
+
+  if (!element) {
+    return;
+  }
+
 
   element.className =
     `ktms-message ${type}`;
+
 
   element.textContent =
     message || "";
@@ -1727,14 +2007,31 @@ function setMessage(message, type = "info") {
 
 function escapeHtml(value) {
   return String(value)
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
+    .replaceAll(
+      "&",
+      "&amp;"
+    )
+    .replaceAll(
+      "<",
+      "&lt;"
+    )
+    .replaceAll(
+      ">",
+      "&gt;"
+    )
+    .replaceAll(
+      '"',
+      "&quot;"
+    )
+    .replaceAll(
+      "'",
+      "&#039;"
+    );
 }
 
 
 function escapeAttribute(value) {
-  return escapeHtml(value);
+  return escapeHtml(
+    value
+  );
 }
