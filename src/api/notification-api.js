@@ -78,6 +78,12 @@ export async function getNotificationSent() {
   );
 }
 
+export async function getAdminNotificationCommunications() {
+  return notificationApi(
+    "notification.adminCommunications"
+  );
+}
+
 export async function getNotificationUnreadCount() {
   return notificationApi(
     "notification.unreadCount"
