@@ -1,55 +1,55 @@
 import {
-  getNotificationInbox,
-  getNotificationSent,
-  getNotificationUnreadCount,
-  getAdminNotificationCommunications,
-  searchNotificationRecipients,
-  markNotificationRead,
-  markNotificationUnread,
-  retryNotification,
-  sendNotification
-} from "../../api/notification-api.js";
+  getSupportCases,
+  getSupportCase,
+  respondToSupportCase,
+  requestSupportInformation,
+  resolveSupportCase,
+  rejectSupportCase,
+  closeSupportCase,
+  reopenSupportCase
+} from "../../api/support-api.js";
+
+
+const STATUS_OPTIONS = [
+  "Submitted",
+  "Under Review",
+  "Awaiting Player Information",
+  "Resolved",
+  "Rejected",
+  "Closed"
+];
+
+const TYPE_OPTIONS = [
+  "Support",
+  "Dispute",
+  "Appeal"
+];
 
 
 const state = {
-  activeTab: "inbox",
+  admin: null,
 
-  inbox: [],
-  sent: [],
-  adminCommunications: [],
+  cases: [],
+  selectedCase: null,
 
-  unreadCount: 0,
-
-  inboxFilters: {
-    readStatus: "All",
-    notificationType: "All",
-    notificationMode: "All"
+  filters: {
+    filter: "",
+    caseType: "",
+    caseCategory: "",
+    search: ""
   },
-
-  sentFilters: {
-    readStatus: "All",
-    notificationType: "All",
-    notificationMode: "All"
-  },
-
-  recipientSearch: "",
-  recipientResults: [],
-  selectedRecipient: null,
-  recipientSearchTimer: null,
 
   loading: false,
-  admin: null
+  selectedCaseLoading: false,
+  actionLoading: false
 };
 
 
 /* =========================================================
-   MAIN RENDER
+   MAIN
    ========================================================= */
 
-export async function renderNotifications(
-  page,
-  admin
-) {
+export async function renderSupport(page, admin) {
   state.admin = admin;
 
   page.innerHTML = `
@@ -58,16 +58,16 @@ export async function renderNotifications(
       <div class="ktms-module-toolbar">
 
         <div>
-          <h2>Notifications</h2>
+          <h2>Support</h2>
 
           <p>
-            KTMS communication centre for player
-            and administrator notifications.
+            Manage player support cases, disputes and appeals.
+            All case communications and decisions remain auditable.
           </p>
         </div>
 
         <button
-          id="notifications-refresh"
+          id="support-refresh"
           class="ktms-secondary-button"
           type="button"
         >
@@ -77,185 +77,65 @@ export async function renderNotifications(
       </div>
 
       <div
-        id="notifications-message"
+        id="support-message"
         class="ktms-message"
         aria-live="polite"
       ></div>
 
-      <div class="ktms-notification-tabs">
-
-        <button
-          type="button"
-          class="ktms-notification-tab active"
-          data-notification-tab="inbox"
-        >
-          Inbox
-
-          <span
-            id="notification-unread-count"
-            class="ktms-notification-count"
-          >
-            0
-          </span>
-        </button>
-
-        <button
-          type="button"
-          class="ktms-notification-tab"
-          data-notification-tab="sent"
-        >
-          Sent
-        </button>
-
-        ${
-          admin?.role === "Game Master"
-            ? `
-              <button
-                type="button"
-                class="ktms-notification-tab"
-                data-notification-tab="admin-oversight"
-              >
-                Admin Oversight
-              </button>
-            `
-            : ""
-        }
-
-        <button
-          type="button"
-          class="ktms-notification-tab"
-          data-notification-tab="compose"
-        >
-          Compose
-        </button>
-
+      <div id="support-content">
+        Loading...
       </div>
-
-      <div id="notifications-content"></div>
 
     </div>
   `;
 
-  bindEvents(admin);
+  bindToolbarEvents();
 
-  await loadNotifications(admin);
+  await loadCases();
 }
 
 
 /* =========================================================
-   EVENTS
+   LOAD CASES
    ========================================================= */
 
-function bindEvents(admin) {
-  document
-    .getElementById("notifications-refresh")
-    ?.addEventListener(
-      "click",
-      () => loadNotifications(admin)
-    );
-
-  document
-    .querySelectorAll("[data-notification-tab]")
-    .forEach((button) => {
-      button.addEventListener(
-        "click",
-        async () => {
-          state.activeTab =
-            button.dataset.notificationTab;
-
-          updateTabs();
-
-          if (
-            state.activeTab === "compose"
-          ) {
-            renderCompose(admin);
-            return;
-          }
-
-          renderCurrentTab();
-        }
-      );
-    });
-}
-
-
-/* =========================================================
-   LOAD DATA
-   ========================================================= */
-
-async function loadNotifications(admin) {
-  setMessage(
-    "Loading notifications...",
-    "info"
-  );
+async function loadCases() {
+  setMessage("Loading support cases...", "info");
 
   try {
     state.loading = true;
 
-    const isGameMaster =
-      admin?.role === "Game Master";
+    const result = await getSupportCases(
+      state.filters
+    );
 
-    const requests = [
-      getNotificationInbox(
-        state.inboxFilters
-      ),
+    state.cases = normalizeRows(result);
 
-      getNotificationSent(
-        state.sentFilters
-      ),
-
-      getNotificationUnreadCount()
-    ];
-
-    if (isGameMaster) {
-      requests.push(
-        getAdminNotificationCommunications()
-      );
-    }
-
-    const results =
-      await Promise.all(requests);
-
-    state.inbox =
-      normalizeRows(results[0]);
-
-    state.sent =
-      normalizeRows(results[1]);
-
-    state.unreadCount =
-      Number(results[2] || 0);
-
-    state.adminCommunications =
-      isGameMaster
-        ? normalizeRows(results[3])
-        : [];
-
-    updateUnreadCount();
-
-    renderCurrentTab();
+    renderWorkspace();
 
     setMessage(
-      "Notifications loaded.",
+      `${state.cases.length} support case${
+        state.cases.length === 1 ? "" : "s"
+      } loaded.`,
       "success"
     );
 
   } catch (error) {
     console.error(
-      "KTMS notification load failed:",
+      "KTMS support case load failed:",
       error
     );
 
+    state.cases = [];
+
     const content =
-      document.getElementById(
-        "notifications-content"
-      );
+      document.getElementById("support-content");
 
     if (content) {
       content.innerHTML = `
         <div class="ktms-error-card">
-
           <strong>
-            Unable to load notifications.
+            Unable to load support cases.
           </strong>
 
           <p>
@@ -264,14 +144,13 @@ async function loadNotifications(admin) {
               "An unexpected error occurred."
             )}
           </p>
-
         </div>
       `;
     }
 
     setMessage(
       error?.message ||
-        "Unable to load notifications.",
+      "Unable to load support cases.",
       "error"
     );
 
@@ -282,59 +161,41 @@ async function loadNotifications(admin) {
 
 
 /* =========================================================
-   TAB ROUTING
+   WORKSPACE
    ========================================================= */
 
-function renderCurrentTab() {
-  if (state.activeTab === "inbox") {
-    renderInbox();
-    return;
-  }
+function renderWorkspace() {
+  const content =
+    document.getElementById("support-content");
 
-  if (state.activeTab === "sent") {
-    renderSent();
-    return;
-  }
+  if (!content) return;
 
-  if (
-    state.activeTab ===
-    "admin-oversight"
-  ) {
-    renderAdminOversight();
-    return;
-  }
+  content.innerHTML = `
+    <div class="ktms-support-workspace">
 
-  if (state.activeTab === "compose") {
-    renderCompose(state.admin);
-  }
-}
+      <div class="ktms-support-list-panel">
 
+        ${renderFilters()}
 
-function updateTabs() {
-  document
-    .querySelectorAll(
-      "[data-notification-tab]"
-    )
-    .forEach((button) => {
-      button.classList.toggle(
-        "active",
-        button.dataset.notificationTab ===
-          state.activeTab
-      );
-    });
-}
+        <div id="support-case-list">
+          ${renderCaseList()}
+        </div>
 
+      </div>
 
-function updateUnreadCount() {
-  const element =
-    document.getElementById(
-      "notification-unread-count"
-    );
+      <div
+        class="ktms-support-detail-panel"
+        id="support-case-detail"
+      >
+        ${renderCaseDetail()}
+      </div>
 
-  if (element) {
-    element.textContent =
-      String(state.unreadCount);
-  }
+    </div>
+  `;
+
+  bindFilterEvents();
+  bindCaseSelectionEvents();
+  bindDetailEvents();
 }
 
 
@@ -342,1513 +203,987 @@ function updateUnreadCount() {
    FILTERS
    ========================================================= */
 
-function renderNotificationFilters(
-  context,
-  rows
-) {
-  const filters =
-    context === "sent"
-      ? state.sentFilters
-      : state.inboxFilters;
-
-  const types = [
-    ...new Set(
-      rows
-        .map(
-          (row) =>
-            row.notification_type ||
-            row.notificationType
-        )
-        .filter(Boolean)
-    )
-  ];
-
-  const modes = [
-    ...new Set(
-      rows
-        .map(
-          (row) =>
-            row.notification_mode ||
-            row.notificationMode
-        )
-        .filter(Boolean)
-    )
-  ];
-
+function renderFilters() {
   return `
-    <div
-      class="ktms-notification-filters"
-      data-filter-context="${context}"
-    >
+    <div class="ktms-card">
 
-      <label>
-        Read
+      <div class="ktms-support-filter-grid">
 
-        <select
-          data-notification-filter="readStatus"
-        >
-          <option
-            value="All"
-            ${
-              filters.readStatus === "All"
-                ? "selected"
-                : ""
-            }
-          >
-            All
-          </option>
+        <label class="ktms-form-field">
 
-          <option
-            value="Unread"
-            ${
-              filters.readStatus === "Unread"
-                ? "selected"
-                : ""
-            }
-          >
-            Unread
-          </option>
+          <span>Search</span>
 
-          <option
-            value="Read"
-            ${
-              filters.readStatus === "Read"
-                ? "selected"
-                : ""
-            }
-          >
-            Read
-          </option>
-        </select>
-      </label>
+          <input
+            id="support-search"
+            type="search"
+            placeholder="Case ID, player, subject..."
+            value="${escapeAttribute(
+              state.filters.search
+            )}"
+          />
+
+        </label>
 
 
-      <label>
-        Notification Type
+        <label class="ktms-form-field">
 
-        <select
-          data-notification-filter="notificationType"
-        >
-          <option
-            value="All"
-          >
-            All
-          </option>
+          <span>Status</span>
 
-          ${types
-            .map(
-              (type) => `
-                <option
-                  value="${escapeAttribute(type)}"
-                  ${
-                    filters.notificationType === type
-                      ? "selected"
-                      : ""
-                  }
-                >
-                  ${escapeHtml(type)}
-                </option>
-              `
-            )
-            .join("")}
-        </select>
-      </label>
+          <select id="support-status-filter">
 
+            <option value="">
+              All statuses
+            </option>
 
-      <label>
-        Notification Mode
-
-        <select
-          data-notification-filter="notificationMode"
-        >
-          <option
-            value="All"
-          >
-            All
-          </option>
-
-          ${modes
-            .map(
-              (mode) => `
-                <option
-                  value="${escapeAttribute(mode)}"
-                  ${
-                    filters.notificationMode === mode
-                      ? "selected"
-                      : ""
-                  }
-                >
-                  ${escapeHtml(mode)}
-                </option>
-              `
-            )
-            .join("")}
-        </select>
-      </label>
-
-
-      <button
-        type="button"
-        class="ktms-secondary-button"
-        data-notification-filter-reset="${context}"
-      >
-        RESET
-      </button>
-
-    </div>
-  `;
-}
-
-
-function bindNotificationFilters(context) {
-  const filters =
-    context === "sent"
-      ? state.sentFilters
-      : state.inboxFilters;
-
-  document
-    .querySelectorAll(
-      `[data-filter-context="${context}"] [data-notification-filter]`
-    )
-    .forEach((select) => {
-      select.addEventListener(
-        "change",
-        async () => {
-          filters[
-            select.dataset
-              .notificationFilter
-          ] = select.value;
-
-          if (context === "sent") {
-            await refreshSent();
-          } else {
-            await refreshInbox();
-          }
-        }
-      );
-    });
-
-  document
-    .querySelector(
-      `[data-notification-filter-reset="${context}"]`
-    )
-    ?.addEventListener(
-      "click",
-      async () => {
-        filters.readStatus = "All";
-        filters.notificationType = "All";
-        filters.notificationMode = "All";
-
-        if (context === "sent") {
-          await refreshSent();
-        } else {
-          await refreshInbox();
-        }
-      }
-    );
-}
-
-
-async function refreshInbox() {
-  try {
-    setMessage(
-      "Loading inbox...",
-      "info"
-    );
-
-    state.inbox =
-      normalizeRows(
-        await getNotificationInbox(
-          state.inboxFilters
-        )
-      );
-
-    renderInbox();
-
-    setMessage(
-      "Inbox updated.",
-      "success"
-    );
-
-  } catch (error) {
-    console.error(
-      "KTMS notification inbox refresh failed:",
-      error
-    );
-
-    setMessage(
-      error?.message ||
-        "Unable to refresh inbox.",
-      "error"
-    );
-  }
-}
-
-
-async function refreshSent() {
-  try {
-    setMessage(
-      "Loading sent notifications...",
-      "info"
-    );
-
-    state.sent =
-      normalizeRows(
-        await getNotificationSent(
-          state.sentFilters
-        )
-      );
-
-    renderSent();
-
-    setMessage(
-      "Sent notifications updated.",
-      "success"
-    );
-
-  } catch (error) {
-    console.error(
-      "KTMS notification sent refresh failed:",
-      error
-    );
-
-    setMessage(
-      error?.message ||
-        "Unable to refresh sent notifications.",
-      "error"
-    );
-  }
-}
-
-
-/* =========================================================
-   INBOX
-   ========================================================= */
-
-function renderInbox() {
-  const content =
-    document.getElementById(
-      "notifications-content"
-    );
-
-  if (!content) return;
-
-  content.innerHTML = `
-    ${renderNotificationFilters(
-      "inbox",
-      state.inbox
-    )}
-
-    ${
-      !state.inbox.length
-        ? emptyState(
-            "Inbox is empty.",
-            "New KTMS notifications will appear here."
-          )
-        : `
-          <div class="ktms-notification-list">
-            ${state.inbox
+            ${STATUS_OPTIONS
               .map(
-                (notification) =>
-                  renderNotificationCard(
-                    notification,
-                    "inbox"
-                  )
+                (status) => `
+                  <option
+                    value="${escapeAttribute(status)}"
+                    ${
+                      state.filters.filter === status
+                        ? "selected"
+                        : ""
+                    }
+                  >
+                    ${escapeHtml(status)}
+                  </option>
+                `
               )
               .join("")}
-          </div>
-        `
-    }
-  `;
 
-  bindNotificationActions();
-  bindNotificationFilters("inbox");
-}
+          </select>
+
+        </label>
 
 
-/* =========================================================
-   SENT
-   ========================================================= */
+        <label class="ktms-form-field">
 
-function renderSent() {
-  const content =
-    document.getElementById(
-      "notifications-content"
-    );
+          <span>Case Type</span>
 
-  if (!content) return;
+          <select id="support-type-filter">
 
-  content.innerHTML = `
-    ${renderNotificationFilters(
-      "sent",
-      state.sent
-    )}
+            <option value="">
+              All types
+            </option>
 
-    ${
-      !state.sent.length
-        ? emptyState(
-            "No sent notifications.",
-            "Messages sent from this administrator will appear here."
-          )
-        : `
-          <div class="ktms-notification-list">
-            ${state.sent
+            ${TYPE_OPTIONS
               .map(
-                (notification) =>
-                  renderNotificationCard(
-                    notification,
-                    "sent"
-                  )
+                (type) => `
+                  <option
+                    value="${escapeAttribute(type)}"
+                    ${
+                      state.filters.caseType === type
+                        ? "selected"
+                        : ""
+                    }
+                  >
+                    ${escapeHtml(type)}
+                  </option>
+                `
               )
               .join("")}
-          </div>
-        `
-    }
-  `;
 
-  bindNotificationActions();
-  bindNotificationFilters("sent");
-}
+          </select>
+
+        </label>
 
 
-/* =========================================================
-   GAME MASTER OVERSIGHT
-   ========================================================= */
+        <label class="ktms-form-field">
 
-function renderAdminOversight() {
-  const content =
-    document.getElementById(
-      "notifications-content"
-    );
+          <span>Category</span>
 
-  if (!content) return;
+          <input
+            id="support-category-filter"
+            type="text"
+            placeholder="Category"
+            value="${escapeAttribute(
+              state.filters.caseCategory
+            )}"
+          />
 
-  if (
-    state.admin?.role !== "Game Master"
-  ) {
-    content.innerHTML =
-      emptyState(
-        "Access restricted.",
-        "Game Master authority is required."
-      );
+        </label>
 
-    return;
-  }
 
-  if (!state.adminCommunications.length) {
-    content.innerHTML =
-      emptyState(
-        "No administrator communications.",
-        "Administrator-to-administrator communications will appear here."
-      );
+        <div class="ktms-support-filter-actions">
 
-    return;
-  }
+          <button
+            id="support-apply-filters"
+            class="ktms-primary-button"
+            type="button"
+          >
+            APPLY
+          </button>
 
-  content.innerHTML = `
-    <div class="ktms-admin-oversight-header">
+          <button
+            id="support-reset-filters"
+            class="ktms-secondary-button"
+            type="button"
+          >
+            RESET
+          </button>
 
-      <div>
-        <h3>
-          Administrator Communications
-        </h3>
+        </div>
 
-        <p>
-          Game Master oversight of
-          administrator-to-administrator
-          communications.
-        </p>
       </div>
 
     </div>
+  `;
+}
 
-    <div class="ktms-notification-list">
 
-      ${state.adminCommunications
-        .map(
-          (notification) =>
-            renderNotificationCard(
-              notification,
-              "admin-oversight"
-            )
-        )
-        .join("")}
+function bindFilterEvents() {
+  document
+    .getElementById("support-apply-filters")
+    ?.addEventListener("click", async () => {
+
+      state.filters.search =
+        document.getElementById(
+          "support-search"
+        )?.value.trim() || "";
+
+      state.filters.filter =
+        document.getElementById(
+          "support-status-filter"
+        )?.value || "";
+
+      state.filters.caseType =
+        document.getElementById(
+          "support-type-filter"
+        )?.value || "";
+
+      state.filters.caseCategory =
+        document.getElementById(
+          "support-category-filter"
+        )?.value.trim() || "";
+
+      await loadCases();
+    });
+
+
+  document
+    .getElementById("support-reset-filters")
+    ?.addEventListener("click", async () => {
+
+      state.filters = {
+        filter: "",
+        caseType: "",
+        caseCategory: "",
+        search: ""
+      };
+
+      await loadCases();
+    });
+}
+
+
+/* =========================================================
+   CASE LIST
+   ========================================================= */
+
+function renderCaseList() {
+  if (!state.cases.length) {
+    return `
+      <div class="ktms-empty-state">
+
+        <h3>No support cases</h3>
+
+        <p>
+          No cases match the current filters.
+        </p>
+
+      </div>
+    `;
+  }
+
+
+  return `
+    <div class="ktms-card">
+
+      <div class="ktms-support-list-header">
+        <h3>Cases</h3>
+
+        <span>
+          ${state.cases.length}
+        </span>
+      </div>
+
+
+      <div class="ktms-table-wrapper">
+
+        <table class="ktms-table">
+
+          <thead>
+            <tr>
+              <th>Case</th>
+              <th>Player</th>
+              <th>Type</th>
+              <th>Status</th>
+              <th>Modified</th>
+            </tr>
+          </thead>
+
+          <tbody>
+
+            ${state.cases
+              .map(
+                (item) => `
+                  <tr
+                    class="ktms-support-case-row ${
+                      state.selectedCase?.caseId ===
+                      item.caseId
+                        ? "active"
+                        : ""
+                    }"
+                    data-support-case-id="${escapeAttribute(
+                      item.caseId
+                    )}"
+                  >
+
+                    <td>
+                      <strong>
+                        ${escapeHtml(
+                          item.caseId || "—"
+                        )}
+                      </strong>
+
+                      <div class="ktms-support-row-subtext">
+                        ${escapeHtml(
+                          item.subject || "No subject"
+                        )}
+                      </div>
+                    </td>
+
+                    <td>
+                      ${escapeHtml(
+                        item.playerName || "—"
+                      )}
+
+                      <div class="ktms-support-row-subtext">
+                        ${escapeHtml(
+                          item.playerId || ""
+                        )}
+                      </div>
+                    </td>
+
+                    <td>
+                      ${escapeHtml(
+                        item.caseType || "—"
+                      )}
+                    </td>
+
+                    <td>
+                      ${statusBadge(
+                        item.status
+                      )}
+                    </td>
+
+                    <td>
+                      ${formatDate(
+                        item.lastModifiedDateTime
+                      )}
+                    </td>
+
+                  </tr>
+                `
+              )
+              .join("")}
+
+          </tbody>
+
+        </table>
+
+      </div>
 
     </div>
   `;
 }
 
 
+function bindCaseSelectionEvents() {
+  document
+    .querySelectorAll(
+      "[data-support-case-id]"
+    )
+    .forEach((row) => {
+
+      row.addEventListener(
+        "click",
+        async () => {
+
+          const caseId =
+            row.dataset.supportCaseId;
+
+          await loadCase(caseId);
+        }
+      );
+
+    });
+}
+
+
 /* =========================================================
-   COMPOSE
+   CASE DETAIL
    ========================================================= */
 
-function renderCompose(admin) {
-  const content =
-    document.getElementById(
-      "notifications-content"
-    );
+function renderCaseDetail() {
+  if (!state.selectedCase) {
+    return `
+      <div class="ktms-card ktms-support-empty-detail">
 
-  if (!content) return;
+        <h3>Select a case</h3>
 
-  state.recipientSearch = "";
-  state.recipientResults = [];
-  state.selectedRecipient = null;
+        <p>
+          Select a support case from the list
+          to inspect its history and available
+          operations.
+        </p>
 
-  content.innerHTML = `
-    <div class="ktms-notification-compose">
+      </div>
+    `;
+  }
+
+
+  const item = state.selectedCase;
+
+  return `
+    <div class="ktms-support-detail">
+
+      ${renderCaseHeader(item)}
+
+      ${renderCaseContext(item)}
+
+      ${renderPlayerDescription(item)}
+
+      ${renderMessages(item)}
+
+      ${renderEvidence(item)}
+
+      ${renderTimeline(item)}
+
+      ${renderResolution(item)}
+
+      ${renderActions(item)}
+
+    </div>
+  `;
+}
+
+
+function renderCaseHeader(item) {
+  return `
+    <div class="ktms-card">
+
+      <div class="ktms-support-detail-header">
+
+        <div>
+
+          <div class="ktms-support-case-id">
+            ${escapeHtml(
+              item.caseId || "—"
+            )}
+          </div>
+
+          <h3>
+            ${escapeHtml(
+              item.subject || "Support Case"
+            )}
+          </h3>
+
+        </div>
+
+        <div>
+          ${statusBadge(item.status)}
+        </div>
+
+      </div>
+
+
+      <div class="ktms-support-meta-grid">
+
+        ${metaItem(
+          "Case Type",
+          item.caseType
+        )}
+
+        ${metaItem(
+          "Category",
+          item.caseCategory
+        )}
+
+        ${metaItem(
+          "Created",
+          formatDate(item.createdDateTime)
+        )}
+
+        ${metaItem(
+          "Last Modified",
+          formatDate(
+            item.lastModifiedDateTime
+          )
+        )}
+
+      </div>
+
+    </div>
+  `;
+}
+
+
+function renderCaseContext(item) {
+  return `
+    <div class="ktms-card">
 
       <div class="ktms-section-header">
 
         <div>
-          <h3>
-            Compose Notification
-          </h3>
+          <h3>Case Context</h3>
+        </div>
 
+      </div>
+
+
+      <div class="ktms-support-meta-grid">
+
+        ${metaItem(
+          "Player",
+          item.playerName
+            ? `${item.playerName} (${item.playerId || "—"})`
+            : item.playerId
+        )}
+
+        ${metaItem(
+          "Player Email",
+          item.playerEmail
+        )}
+
+        ${metaItem(
+          "Tournament",
+          item.tournamentId
+        )}
+
+        ${metaItem(
+          "Registration",
+          item.registrationReferenceId ||
+          item.registrationId
+        )}
+
+        ${metaItem(
+          "Fixture",
+          item.fixtureId
+        )}
+
+        ${metaItem(
+          "Match Code",
+          item.matchCode
+        )}
+
+        ${metaItem(
+          "Transaction",
+          item.transactionHistoryId
+        )}
+
+      </div>
+
+    </div>
+  `;
+}
+
+
+function renderPlayerDescription(item) {
+  return `
+    <div class="ktms-card">
+
+      <div class="ktms-section-header">
+        <h3>Player Description</h3>
+      </div>
+
+      <div class="ktms-support-description">
+        ${
+          item.playerDescription
+            ? escapeHtml(
+                item.playerDescription
+              )
+            : "No description provided."
+        }
+      </div>
+
+    </div>
+  `;
+}
+
+
+/* =========================================================
+   MESSAGES
+   ========================================================= */
+
+function renderMessages(item) {
+  const messages =
+    array(item.messages);
+
+  return `
+    <div class="ktms-card">
+
+      <div class="ktms-section-header">
+
+        <div>
+          <h3>Communication</h3>
           <p>
-            Send an authenticated KTMS
-            communication to an existing
-            player or administrator.
+            Permanent case communication history.
           </p>
         </div>
 
       </div>
 
 
-      <form
-        id="notification-compose-form"
-        class="ktms-form"
-      >
+      ${
+        !messages.length
+          ? `
+            <div class="ktms-empty-state">
+              No messages recorded.
+            </div>
+          `
+          : `
+            <div class="ktms-support-message-list">
 
-        <div class="ktms-form-row">
+              ${messages
+                .map(
+                  (message) => `
+                    <div class="ktms-support-message">
 
-          <label>
-            Recipient Type
+                      <div class="ktms-support-message-header">
 
-            <select
-              id="notification-recipient-type"
-              required
-            >
+                        <strong>
+                          ${escapeHtml(
+                            message.senderType ||
+                            "Unknown"
+                          )}
+                        </strong>
 
-              <option value="Player">
-                Player
-              </option>
+                        <span>
+                          ${formatDate(
+                            message.createdDateTime
+                          )}
+                        </span>
 
-              ${
-                admin?.role === "Game Master"
-                  ? `
-                    <option value="Admin">
-                      Administrator
-                    </option>
+                      </div>
+
+                      <div class="ktms-support-message-body">
+                        ${escapeHtml(
+                          message.message || ""
+                        )}
+                      </div>
+
+                    </div>
                   `
-                  : ""
-              }
-
-            </select>
-          </label>
-
-        </div>
-
-
-        <div class="ktms-form-row">
-
-          <label>
-            Recipient
-
-            <div class="ktms-notification-recipient-search">
-
-              <input
-                id="notification-recipient-search"
-                type="text"
-                autocomplete="off"
-                placeholder="Search by name, ID or email..."
-                required
-              />
-
-              <input
-                id="notification-recipient-id"
-                type="hidden"
-              />
-
-              <div
-                id="notification-recipient-results"
-                class="ktms-notification-recipient-results"
-              ></div>
+                )
+                .join("")}
 
             </div>
-
-          </label>
-
-        </div>
+          `
+      }
 
 
-        <div class="ktms-form-row">
+      ${
+        canManageSupport()
+          ? `
+            <div class="ktms-support-response-box">
 
-          <label>
-            Notification Mode
+              <label class="ktms-form-field">
 
-            <select
-              id="notification-mode"
-              required
-            >
+                <span>
+                  Add response
+                </span>
 
-              <option value="Direct">
-                Direct
-              </option>
+                <textarea
+                  id="support-response-message"
+                  rows="4"
+                  placeholder="Write a response to the case..."
+                ></textarea>
 
-              ${
-                admin?.role === "Game Master"
-                  ? `
-                    <option value="Administrative">
-                      Administrative
-                    </option>
-                  `
-                  : ""
-              }
+              </label>
 
-            </select>
-          </label>
+              <div class="ktms-support-response-actions">
 
+                <button
+                  id="support-respond"
+                  class="ktms-primary-button"
+                  type="button"
+                >
+                  RESPOND
+                </button>
 
-          <label>
-            Delivery
+                <button
+                  id="support-request-information"
+                  class="ktms-secondary-button"
+                  type="button"
+                >
+                  REQUEST INFORMATION
+                </button>
 
-            <select
-              id="notification-delivery"
-              required
-            >
+              </div>
 
-              <option value="Both">
-                In-App + Email
-              </option>
-
-              <option value="In-App">
-                In-App Only
-              </option>
-
-              <option value="Email">
-                Email Only
-              </option>
-
-            </select>
-          </label>
-
-        </div>
-
-
-        <div class="ktms-form-row">
-
-          <label>
-            Priority
-
-            <select
-              id="notification-priority"
-              required
-            >
-
-              <option value="Normal">
-                Normal
-              </option>
-
-              <option value="Low">
-                Low
-              </option>
-
-              <option value="High">
-                High
-              </option>
-
-              <option value="Critical">
-                Critical
-              </option>
-
-            </select>
-          </label>
-
-
-          <label>
-            Notification Type
-
-            <input
-              id="notification-type"
-              type="text"
-              value="Direct"
-              required
-            />
-
-          </label>
-
-        </div>
-
-
-        <div class="ktms-form-row">
-
-          <label>
-            Subject
-
-            <input
-              id="notification-subject"
-              type="text"
-              maxlength="200"
-              required
-            />
-
-          </label>
-
-        </div>
-
-
-        <div class="ktms-form-row">
-
-          <label>
-            Message
-
-            <textarea
-              id="notification-message"
-              rows="8"
-              maxlength="5000"
-              required
-            ></textarea>
-
-          </label>
-
-        </div>
-
-
-        <div
-          id="notification-compose-status"
-          class="ktms-message"
-          aria-live="polite"
-        ></div>
-
-
-        <div class="ktms-form-actions">
-
-          <button
-            type="submit"
-            class="ktms-primary-button"
-          >
-            SEND NOTIFICATION
-          </button>
-
-        </div>
-
-      </form>
+            </div>
+          `
+          : ""
+      }
 
     </div>
   `;
-
-  bindComposeEvents(admin);
 }
 
 
 /* =========================================================
-   RECIPIENT SEARCH
+   EVIDENCE
    ========================================================= */
 
-function bindComposeEvents(admin) {
-  const recipientType =
-    document.getElementById(
-      "notification-recipient-type"
-    );
-
-  const recipientSearch =
-    document.getElementById(
-      "notification-recipient-search"
-    );
-
-  recipientType?.addEventListener(
-    "change",
-    () => {
-      state.recipientSearch = "";
-      state.recipientResults = [];
-      state.selectedRecipient = null;
-
-      if (recipientSearch) {
-        recipientSearch.value = "";
-      }
-
-      clearRecipientResults();
-    }
-  );
-
-
-  recipientSearch?.addEventListener(
-    "input",
-    () => {
-      state.recipientSearch =
-        recipientSearch.value.trim();
-
-      state.selectedRecipient = null;
-
-      const hidden =
-        document.getElementById(
-          "notification-recipient-id"
-        );
-
-      if (hidden) {
-        hidden.value = "";
-      }
-
-      clearTimeout(
-        state.recipientSearchTimer
-      );
-
-      if (
-        state.recipientSearch.length < 2
-      ) {
-        clearRecipientResults();
-        return;
-      }
-
-      state.recipientSearchTimer =
-        setTimeout(
-          searchRecipients,
-          300
-        );
-    }
-  );
-
-
-  document
-    .getElementById(
-      "notification-compose-form"
-    )
-    ?.addEventListener(
-      "submit",
-      (event) =>
-        handleComposeSubmit(
-          event,
-          admin
-        )
-    );
-}
-
-
-async function searchRecipients() {
-  const search =
-    state.recipientSearch.trim();
-
-  if (search.length < 2) {
-    clearRecipientResults();
-    return;
-  }
-
-  const recipientType =
-    document.getElementById(
-      "notification-recipient-type"
-    )?.value;
-
-  if (!recipientType) {
-    return;
-  }
-
-  const resultsContainer =
-    document.getElementById(
-      "notification-recipient-results"
-    );
-
-  if (!resultsContainer) {
-    return;
-  }
-
-  resultsContainer.innerHTML = `
-    <div class="ktms-notification-recipient-loading">
-      Searching...
-    </div>
-  `;
-
-  try {
-    const results =
-      await searchNotificationRecipients(
-        recipientType,
-        search,
-        10
-      );
-
-    state.recipientResults =
-      normalizeRows(results);
-
-    renderRecipientResults();
-
-  } catch (error) {
-    console.error(
-      "KTMS recipient search failed:",
-      error
-    );
-
-    resultsContainer.innerHTML = `
-      <div class="ktms-notification-recipient-error">
-        ${escapeHtml(
-          error?.message ||
-          "Unable to search recipients."
-        )}
-      </div>
-    `;
-  }
-}
-
-
-function renderRecipientResults() {
-  const container =
-    document.getElementById(
-      "notification-recipient-results"
-    );
-
-  if (!container) return;
-
-  if (!state.recipientResults.length) {
-    container.innerHTML = `
-      <div class="ktms-notification-recipient-empty">
-        No matching recipients found.
-      </div>
-    `;
-
-    return;
-  }
-
-  container.innerHTML =
-    state.recipientResults
-      .map((recipient, index) => {
-        const id =
-          recipient.player_id ||
-          recipient.playerId ||
-          recipient.admin_id ||
-          recipient.adminId ||
-          recipient.id ||
-          "";
-
-        const name =
-          recipient.manager_name ||
-          recipient.managerName ||
-          recipient.display_name ||
-          recipient.displayName ||
-          recipient.name ||
-          id;
-
-        const email =
-          recipient.email_address ||
-          recipient.emailAddress ||
-          recipient.login_email ||
-          recipient.loginEmail ||
-          recipient.email ||
-          "";
-
-        return `
-          <button
-            type="button"
-            class="ktms-notification-recipient-result"
-            data-recipient-index="${index}"
-          >
-
-            <strong>
-              ${escapeHtml(name)}
-            </strong>
-
-            <span>
-              ${escapeHtml(id)}
-              ${
-                email
-                  ? ` · ${escapeHtml(email)}`
-                  : ""
-              }
-            </span>
-
-          </button>
-        `;
-      })
-      .join("");
-
-
-  container
-    .querySelectorAll(
-      "[data-recipient-index]"
-    )
-    .forEach((button) => {
-      button.addEventListener(
-        "click",
-        () => {
-          const index =
-            Number(
-              button.dataset
-                .recipientIndex
-            );
-
-          selectRecipient(
-            state.recipientResults[index]
-          );
-        }
-      );
-    });
-}
-
-
-function selectRecipient(recipient) {
-  const id =
-    recipient.player_id ||
-    recipient.playerId ||
-    recipient.admin_id ||
-    recipient.adminId ||
-    recipient.id ||
-    "";
-
-  const name =
-    recipient.manager_name ||
-    recipient.managerName ||
-    recipient.display_name ||
-    recipient.displayName ||
-    recipient.name ||
-    id;
-
-  const email =
-    recipient.email_address ||
-    recipient.emailAddress ||
-    recipient.login_email ||
-    recipient.loginEmail ||
-    recipient.email ||
-    "";
-
-  state.selectedRecipient = {
-    ...recipient,
-    id,
-    name,
-    email
-  };
-
-  const searchInput =
-    document.getElementById(
-      "notification-recipient-search"
-    );
-
-  const hiddenInput =
-    document.getElementById(
-      "notification-recipient-id"
-    );
-
-  if (searchInput) {
-    searchInput.value =
-      email
-        ? `${name} — ${email}`
-        : name;
-  }
-
-  if (hiddenInput) {
-    hiddenInput.value = id;
-  }
-
-  clearRecipientResults();
-}
-
-
-function clearRecipientResults() {
-  const container =
-    document.getElementById(
-      "notification-recipient-results"
-    );
-
-  if (container) {
-    container.innerHTML = "";
-  }
-}
-
-
-/* =========================================================
-   COMPOSE SUBMIT
-   ========================================================= */
-
-async function handleComposeSubmit(
-  event,
-  admin
-) {
-  event.preventDefault();
-
-  const recipientType =
-    document.getElementById(
-      "notification-recipient-type"
-    )?.value;
-
-  const recipientId =
-    document.getElementById(
-      "notification-recipient-id"
-    )?.value;
-
-  const notificationMode =
-    document.getElementById(
-      "notification-mode"
-    )?.value;
-
-  const deliveryChannels =
-    document.getElementById(
-      "notification-delivery"
-    )?.value;
-
-  const notificationPriority =
-    document.getElementById(
-      "notification-priority"
-    )?.value;
-
-  const notificationType =
-    document.getElementById(
-      "notification-type"
-    )?.value
-      ?.trim();
-
-  const subject =
-    document.getElementById(
-      "notification-subject"
-    )?.value
-      ?.trim();
-
-  const message =
-    document.getElementById(
-      "notification-message"
-    )?.value
-      ?.trim();
-
-  const status =
-    document.getElementById(
-      "notification-compose-status"
-    );
-
-  if (!recipientId) {
-    setComposeStatus(
-      status,
-      "Select a valid KTMS recipient from the search results.",
-      "error"
-    );
-
-    return;
-  }
-
-  if (!subject) {
-    setComposeStatus(
-      status,
-      "Subject is required.",
-      "error"
-    );
-
-    return;
-  }
-
-  if (!message) {
-    setComposeStatus(
-      status,
-      "Message is required.",
-      "error"
-    );
-
-    return;
-  }
-
-  if (
-    recipientType === "Admin" &&
-    admin?.role !== "Game Master"
-  ) {
-    setComposeStatus(
-      status,
-      "Only the Game Master can send administrator communications.",
-      "error"
-    );
-
-    return;
-  }
-
-  try {
-    setComposeStatus(
-      status,
-      "Sending notification...",
-      "info"
-    );
-
-    await sendNotification({
-      recipientType,
-      recipientId,
-      notificationMode,
-      deliveryChannels,
-      notificationPriority,
-      notificationType:
-        notificationType || "Direct",
-      subject,
-      message
-    });
-
-    setComposeStatus(
-      status,
-      "Notification sent successfully.",
-      "success"
-    );
-
-    state.recipientSearch = "";
-    state.recipientResults = [];
-    state.selectedRecipient = null;
-
-    document
-      .getElementById(
-        "notification-compose-form"
-      )
-      ?.reset();
-
-    const hidden =
-      document.getElementById(
-        "notification-recipient-id"
-      );
-
-    if (hidden) {
-      hidden.value = "";
-    }
-
-    clearRecipientResults();
-
-  } catch (error) {
-    console.error(
-      "KTMS notification send failed:",
-      error
-    );
-
-    setComposeStatus(
-      status,
-      error?.message ||
-        "Unable to send notification.",
-      "error"
-    );
-  }
-}
-
-
-/* =========================================================
-   NOTIFICATION ACTIONS
-   ========================================================= */
-
-function bindNotificationActions() {
-  document
-    .querySelectorAll(
-      "[data-notification-action]"
-    )
-    .forEach((button) => {
-      button.addEventListener(
-        "click",
-        async () => {
-          const action =
-            button.dataset
-              .notificationAction;
-
-          const notificationId =
-            button.dataset
-              .notificationId;
-
-          if (!notificationId) {
-            return;
-          }
-
-          try {
-            button.disabled = true;
-
-            if (action === "mark-read") {
-              await markNotificationRead(
-                notificationId
-              );
-
-              await refreshInbox();
-
-              return;
-            }
-
-            if (action === "mark-unread") {
-              await markNotificationUnread(
-                notificationId
-              );
-
-              await refreshInbox();
-
-              return;
-            }
-
-            if (action === "retry") {
-              await retryNotification(
-                notificationId
-              );
-
-              await loadNotifications(
-                state.admin
-              );
-
-              return;
-            }
-
-          } catch (error) {
-            console.error(
-              "KTMS notification action failed:",
-              error
-            );
-
-            setMessage(
-              error?.message ||
-                "Notification action failed.",
-              "error"
-            );
-
-          } finally {
-            button.disabled = false;
-          }
-        }
-      );
-    });
-}
-
-
-/* =========================================================
-   CARD
-   ========================================================= */
-
-function renderNotificationCard(
-  notification,
-  context
-) {
-  const id =
-    notification.notification_id ||
-    notification.notificationId ||
-    "";
-
-  const subject =
-    notification.notification_subject ||
-    notification.subject ||
-    "KTMS Notification";
-
-  const body =
-    notification.notification_body ||
-    notification.body ||
-    notification.message ||
-    "";
-
-  const type =
-    notification.notification_type ||
-    notification.notificationType ||
-    "";
-
-  const mode =
-    notification.notification_mode ||
-    notification.notificationMode ||
-    "System";
-
-  const recipient =
-    notification.recipient_id ||
-    notification.recipientId ||
-    "";
-
-  const recipientType =
-    notification.recipient_type ||
-    notification.recipientType ||
-    "";
-
-  const sender =
-    notification.sender_id ||
-    notification.senderId ||
-    "";
-
-  const senderType =
-    notification.sender_type ||
-    notification.senderType ||
-    "";
-
-  const readStatus =
-    notification.read_status ||
-    notification.readStatus ||
-    "Unread";
-
-  const emailStatus =
-    notification.email_status ||
-    notification.emailStatus ||
-    "";
-
-  const inAppStatus =
-    notification.in_app_status ||
-    notification.inAppStatus ||
-    "";
-
-  const deliveryStatus =
-    notification.delivery_status ||
-    notification.deliveryStatus ||
-    "";
-
-  const created =
-    notification.created_datetime ||
-    notification.createdDatetime ||
-    notification.created_at ||
-    "";
-
-  const isUnread =
-    context === "inbox" &&
-    readStatus === "Unread";
-
-  const isFailed =
-    emailStatus === "Failed" ||
-    deliveryStatus === "Failed";
+function renderEvidence(item) {
+  const evidence =
+    array(item.evidence);
 
   return `
-    <article
-      class="
-        ktms-notification-card
-        ${isUnread ? "unread" : ""}
-      "
-      data-notification-id="${escapeAttribute(id)}"
-    >
+    <div class="ktms-card">
 
-      <div class="ktms-notification-card-header">
+      <div class="ktms-section-header">
 
         <div>
-
-          <h3>
-            ${escapeHtml(subject)}
-          </h3>
-
-          <div class="ktms-notification-meta">
-
-            ${
-              type
-                ? `
-                  <span>
-                    Type:
-                    ${escapeHtml(type)}
-                  </span>
-                `
-                : ""
-            }
-
-            <span>
-              Mode:
-              ${escapeHtml(mode)}
-            </span>
-
-            ${
-              created
-                ? `
-                  <span>
-                    ${escapeHtml(
-                      formatDate(created)
-                    )}
-                  </span>
-                `
-                : ""
-            }
-
-          </div>
-
+          <h3>Evidence</h3>
+          <p>
+            Evidence associated with this case.
+          </p>
         </div>
 
-        ${
-          isUnread
-            ? `
-              <span class="ktms-notification-badge">
-                UNREAD
-              </span>
-            `
-            : ""
-        }
+      </div>
+
+
+      ${
+        !evidence.length
+          ? `
+            <div class="ktms-empty-state">
+              No evidence attached.
+            </div>
+          `
+          : `
+            <div class="ktms-support-evidence-list">
+
+              ${evidence
+                .map(
+                  (item) => `
+                    <div class="ktms-support-evidence">
+
+                      <div>
+
+                        <strong>
+                          ${escapeHtml(
+                            item.fileName ||
+                            item.evidenceType ||
+                            "Evidence"
+                          )}
+                        </strong>
+
+                        <div class="ktms-support-row-subtext">
+                          ${escapeHtml(
+                            item.evidenceType ||
+                            ""
+                          )}
+                        </div>
+
+                      </div>
+
+                      ${
+                        item.evidenceUrl
+                          ? `
+                            <a
+                              href="${escapeAttribute(
+                                item.evidenceUrl
+                              )}"
+                              target="_blank"
+                              rel="noopener noreferrer"
+                            >
+                              VIEW
+                            </a>
+                          `
+                          : ""
+                      }
+
+                    </div>
+                  `
+                )
+                .join("")}
+
+            </div>
+          `
+      }
+
+    </div>
+  `;
+}
+
+
+/* =========================================================
+   TIMELINE
+   ========================================================= */
+
+function renderTimeline(item) {
+  const timeline =
+    array(item.timeline);
+
+  return `
+    <div class="ktms-card">
+
+      <div class="ktms-section-header">
+        <h3>Timeline</h3>
+      </div>
+
+
+      ${
+        !timeline.length
+          ? `
+            <div class="ktms-empty-state">
+              No timeline events recorded.
+            </div>
+          `
+          : `
+            <div class="ktms-support-timeline">
+
+              ${timeline
+                .map(
+                  (event) => `
+                    <div class="ktms-support-timeline-item">
+
+                      <div class="ktms-support-timeline-marker"></div>
+
+                      <div>
+
+                        <strong>
+                          ${escapeHtml(
+                            event.eventType ||
+                            "Event"
+                          )}
+                        </strong>
+
+                        <div>
+                          ${escapeHtml(
+                            event.eventSummary ||
+                            ""
+                          )}
+                        </div>
+
+                        <span>
+                          ${formatDate(
+                            event.createdDateTime
+                          )}
+                        </span>
+
+                      </div>
+
+                    </div>
+                  `
+                )
+                .join("")}
+
+            </div>
+          `
+      }
+
+    </div>
+  `;
+}
+
+
+/* =========================================================
+   RESOLUTION
+   ========================================================= */
+
+function renderResolution(item) {
+  const hasResolution =
+    item.resolution ||
+    item.resolutionExplanation ||
+    item.resolutionDateTime;
+
+  if (!hasResolution) {
+    return "";
+  }
+
+  return `
+    <div class="ktms-card">
+
+      <div class="ktms-section-header">
+        <h3>Resolution</h3>
+      </div>
+
+      <div class="ktms-support-meta-grid">
+
+        ${metaItem(
+          "Resolution",
+          item.resolution
+        )}
+
+        ${metaItem(
+          "Resolved",
+          formatDate(
+            item.resolutionDateTime
+          )
+        )}
+
+        ${metaItem(
+          "Resolving Administrator",
+          item.resolvingAdminId
+        )}
 
       </div>
 
 
-      <div class="ktms-notification-card-body">
+      ${
+        item.resolutionExplanation
+          ? `
+            <div class="ktms-support-resolution-text">
 
-        <p>
-          ${escapeHtml(body)}
-        </p>
+              <strong>
+                Explanation
+              </strong>
 
-      </div>
-
-
-      <div class="ktms-notification-card-details">
-
-        ${
-          context === "sent" ||
-          context === "admin-oversight"
-            ? `
-              <span>
-                Recipient:
+              <p>
                 ${escapeHtml(
-                  recipientType
-                    ? `${recipientType} · `
-                    : ""
+                  item.resolutionExplanation
                 )}
-                ${escapeHtml(recipient)}
-              </span>
-            `
-            : `
-              <span>
-                Sender:
-                ${escapeHtml(
-                  senderType
-                    ? `${senderType} · `
-                    : ""
-                )}
-                ${escapeHtml(sender)}
-              </span>
-            `
-        }
+              </p>
 
-        ${
-          inAppStatus
-            ? `
-              <span>
-                In-App:
-                ${escapeHtml(inAppStatus)}
-              </span>
-            `
-            : ""
-        }
+            </div>
+          `
+          : ""
+      }
 
-        ${
-          emailStatus
-            ? `
-              <span>
-                Email:
-                ${escapeHtml(emailStatus)}
-              </span>
-            `
-            : ""
-        }
+    </div>
+  `;
+}
+
+
+/* =========================================================
+   ACTIONS
+   ========================================================= */
+
+function renderActions(item) {
+  if (!canManageSupport()) {
+    return `
+      <div class="ktms-card">
+
+        <div class="ktms-message">
+          You have read-only access to Support cases.
+        </div>
+
+      </div>
+    `;
+  }
+
+
+  const status = item.status;
+
+
+  const canResolve =
+    ![
+      "Resolved",
+      "Rejected",
+      "Closed"
+    ].includes(status);
+
+
+  const canReject =
+    ![
+      "Resolved",
+      "Rejected",
+      "Closed"
+    ].includes(status);
+
+
+  const canClose =
+    [
+      "Resolved",
+      "Rejected"
+    ].includes(status);
+
+
+  const canReopen =
+    [
+      "Resolved",
+      "Rejected",
+      "Closed"
+    ].includes(status);
+
+
+  return `
+    <div class="ktms-card">
+
+      <div class="ktms-section-header">
+
+        <div>
+          <h3>Case Actions</h3>
+
+          <p>
+            Business-domain decisions remain
+            owned by their respective KTMS services.
+          </p>
+        </div>
 
       </div>
 
 
-      <div class="ktms-notification-card-actions">
+      <div class="ktms-support-action-grid">
 
         ${
-          context === "inbox"
-            ? readStatus === "Unread"
-              ? `
-                <button
-                  type="button"
-                  class="ktms-secondary-button"
-                  data-notification-action="mark-read"
-                  data-notification-id="${escapeAttribute(id)}"
-                >
-                  MARK READ
-                </button>
-              `
-              : `
-                <button
-                  type="button"
-                  class="ktms-secondary-button"
-                  data-notification-action="mark-unread"
-                  data-notification-id="${escapeAttribute(id)}"
-                >
-                  MARK UNREAD
-                </button>
-              `
-            : ""
-        }
-
-        ${
-          isFailed
+          canResolve
             ? `
               <button
+                id="support-resolve"
+                class="ktms-primary-button"
                 type="button"
-                class="ktms-secondary-button"
-                data-notification-action="retry"
-                data-notification-id="${escapeAttribute(id)}"
               >
-                RETRY DELIVERY
+                RESOLVE
+              </button>
+            `
+            : ""
+        }
+
+
+        ${
+          canReject
+            ? `
+              <button
+                id="support-reject"
+                class="ktms-danger-button"
+                type="button"
+              >
+                REJECT
+              </button>
+            `
+            : ""
+        }
+
+
+        ${
+          canClose
+            ? `
+              <button
+                id="support-close"
+                class="ktms-secondary-button"
+                type="button"
+              >
+                CLOSE
+              </button>
+            `
+            : ""
+        }
+
+
+        ${
+          canReopen
+            ? `
+              <button
+                id="support-reopen"
+                class="ktms-secondary-button"
+                type="button"
+              >
+                REOPEN
               </button>
             `
             : ""
@@ -1856,8 +1191,434 @@ function renderNotificationCard(
 
       </div>
 
-    </article>
+    </div>
   `;
+}
+
+
+function bindDetailEvents() {
+  document
+    .getElementById("support-respond")
+    ?.addEventListener(
+      "click",
+      () => performResponse("respond")
+    );
+
+
+  document
+    .getElementById(
+      "support-request-information"
+    )
+    ?.addEventListener(
+      "click",
+      () =>
+        performResponse(
+          "requestInformation"
+        )
+    );
+
+
+  document
+    .getElementById("support-resolve")
+    ?.addEventListener(
+      "click",
+      () => performDecision("resolve")
+    );
+
+
+  document
+    .getElementById("support-reject")
+    ?.addEventListener(
+      "click",
+      () => performDecision("reject")
+    );
+
+
+  document
+    .getElementById("support-close")
+    ?.addEventListener(
+      "click",
+      () => performClose()
+    );
+
+
+  document
+    .getElementById("support-reopen")
+    ?.addEventListener(
+      "click",
+      () => performReopen()
+    );
+}
+
+
+/* =========================================================
+   ACTION HANDLERS
+   ========================================================= */
+
+async function performResponse(action) {
+  if (!state.selectedCase) return;
+
+  const message =
+    document.getElementById(
+      "support-response-message"
+    )?.value.trim();
+
+  if (!message) {
+    setMessage(
+      "Enter a message before continuing.",
+      "error"
+    );
+    return;
+  }
+
+
+  try {
+    state.actionLoading = true;
+
+    setMessage(
+      action === "respond"
+        ? "Sending response..."
+        : "Requesting information...",
+      "info"
+    );
+
+
+    if (action === "respond") {
+      await respondToSupportCase(
+        state.selectedCase.caseId,
+        message
+      );
+    } else {
+      await requestSupportInformation(
+        state.selectedCase.caseId,
+        message
+      );
+    }
+
+
+    await refreshSelectedCase();
+
+    setMessage(
+      action === "respond"
+        ? "Response recorded."
+        : "Information request recorded.",
+      "success"
+    );
+
+  } catch (error) {
+    console.error(
+      "KTMS support response action failed:",
+      error
+    );
+
+    setMessage(
+      error?.message ||
+      "Support action failed.",
+      "error"
+    );
+
+  } finally {
+    state.actionLoading = false;
+  }
+}
+
+
+async function performDecision(action) {
+  if (!state.selectedCase) return;
+
+  const resolution =
+    window.prompt(
+      action === "resolve"
+        ? "Enter the resolution:"
+        : "Enter the rejection resolution:"
+    );
+
+  if (!resolution?.trim()) {
+    return;
+  }
+
+
+  const explanation =
+    window.prompt(
+      "Enter the resolution explanation:"
+    );
+
+  if (!explanation?.trim()) {
+    return;
+  }
+
+
+  try {
+    state.actionLoading = true;
+
+    setMessage(
+      action === "resolve"
+        ? "Resolving case..."
+        : "Rejecting case...",
+      "info"
+    );
+
+
+    if (action === "resolve") {
+      await resolveSupportCase(
+        state.selectedCase.caseId,
+        resolution.trim(),
+        explanation.trim()
+      );
+    } else {
+      await rejectSupportCase(
+        state.selectedCase.caseId,
+        resolution.trim(),
+        explanation.trim()
+      );
+    }
+
+
+    await refreshSelectedCase();
+    await refreshCaseListOnly();
+
+
+    setMessage(
+      action === "resolve"
+        ? "Case resolved."
+        : "Case rejected.",
+      "success"
+    );
+
+  } catch (error) {
+    console.error(
+      "KTMS support decision failed:",
+      error
+    );
+
+    setMessage(
+      error?.message ||
+      "Unable to update the case.",
+      "error"
+    );
+
+  } finally {
+    state.actionLoading = false;
+  }
+}
+
+
+async function performClose() {
+  if (!state.selectedCase) return;
+
+
+  if (
+    !window.confirm(
+      "Close this support case?"
+    )
+  ) {
+    return;
+  }
+
+
+  try {
+    state.actionLoading = true;
+
+    setMessage(
+      "Closing case...",
+      "info"
+    );
+
+
+    await closeSupportCase(
+      state.selectedCase.caseId
+    );
+
+
+    await refreshSelectedCase();
+    await refreshCaseListOnly();
+
+
+    setMessage(
+      "Case closed.",
+      "success"
+    );
+
+  } catch (error) {
+    console.error(
+      "KTMS support close failed:",
+      error
+    );
+
+    setMessage(
+      error?.message ||
+      "Unable to close the case.",
+      "error"
+    );
+
+  } finally {
+    state.actionLoading = false;
+  }
+}
+
+
+async function performReopen() {
+  if (!state.selectedCase) return;
+
+
+  const message =
+    window.prompt(
+      "Enter the reason for reopening this case:"
+    );
+
+
+  if (!message?.trim()) {
+    return;
+  }
+
+
+  try {
+    state.actionLoading = true;
+
+    setMessage(
+      "Reopening case...",
+      "info"
+    );
+
+
+    await reopenSupportCase(
+      state.selectedCase.caseId,
+      message.trim()
+    );
+
+
+    await refreshSelectedCase();
+    await refreshCaseListOnly();
+
+
+    setMessage(
+      "Case reopened.",
+      "success"
+    );
+
+  } catch (error) {
+    console.error(
+      "KTMS support reopen failed:",
+      error
+    );
+
+    setMessage(
+      error?.message ||
+      "Unable to reopen the case.",
+      "error"
+    );
+
+  } finally {
+    state.actionLoading = false;
+  }
+}
+
+
+/* =========================================================
+   DATA REFRESH
+   ========================================================= */
+
+async function loadCase(caseId) {
+  try {
+    state.selectedCaseLoading = true;
+
+    setMessage(
+      "Loading case...",
+      "info"
+    );
+
+
+    const result =
+      await getSupportCase(caseId);
+
+
+    state.selectedCase =
+      normalizeObject(result);
+
+
+    renderWorkspace();
+
+
+    setMessage(
+      "Case loaded.",
+      "success"
+    );
+
+  } catch (error) {
+    console.error(
+      "KTMS support case detail load failed:",
+      error
+    );
+
+    setMessage(
+      error?.message ||
+      "Unable to load case.",
+      "error"
+    );
+
+  } finally {
+    state.selectedCaseLoading = false;
+  }
+}
+
+
+async function refreshSelectedCase() {
+  if (!state.selectedCase?.caseId) {
+    return;
+  }
+
+
+  const caseId =
+    state.selectedCase.caseId;
+
+
+  const result =
+    await getSupportCase(caseId);
+
+
+  state.selectedCase =
+    normalizeObject(result);
+
+
+  renderWorkspace();
+}
+
+
+async function refreshCaseListOnly() {
+  const result =
+    await getSupportCases(
+      state.filters
+    );
+
+  state.cases =
+    normalizeRows(result);
+
+
+  const list =
+    document.getElementById(
+      "support-case-list"
+    );
+
+  if (list) {
+    list.innerHTML =
+      renderCaseList();
+
+    bindCaseSelectionEvents();
+  }
+}
+
+
+/* =========================================================
+   PERMISSIONS
+   ========================================================= */
+
+function canManageSupport() {
+  return [
+    "Game Master",
+    "Support"
+  ].includes(
+    state.admin?.role
+  );
 }
 
 
@@ -1870,75 +1631,89 @@ function normalizeRows(value) {
     return value;
   }
 
-  if (Array.isArray(value?.rows)) {
-    return value.rows;
-  }
-
   if (Array.isArray(value?.data)) {
     return value.data;
+  }
+
+  if (Array.isArray(value?.rows)) {
+    return value.rows;
   }
 
   return [];
 }
 
 
-function emptyState(
-  title,
-  message
-) {
+function normalizeObject(value) {
+  if (value?.data && !Array.isArray(value.data)) {
+    return value.data;
+  }
+
+  return value || {};
+}
+
+
+function array(value) {
+  return Array.isArray(value)
+    ? value
+    : [];
+}
+
+
+function metaItem(label, value) {
   return `
-    <div class="ktms-empty-state">
+    <div class="ktms-support-meta-item">
 
-      <h3>
-        ${escapeHtml(title)}
-      </h3>
+      <span>
+        ${escapeHtml(label)}
+      </span>
 
-      <p>
-        ${escapeHtml(message)}
-      </p>
+      <strong>
+        ${escapeHtml(
+          value === null ||
+          value === undefined ||
+          value === ""
+            ? "—"
+            : value
+        )}
+      </strong>
 
     </div>
   `;
 }
 
 
-function setMessage(
-  message,
-  type = "info"
-) {
-  const element =
-    document.getElementById(
-      "notifications-message"
-    );
+function statusBadge(status) {
+  if (!status) {
+    return `
+      <span class="ktms-support-status">
+        —
+      </span>
+    `;
+  }
 
-  if (!element) return;
-
-  element.className =
-    `ktms-message ${type}`;
-
-  element.textContent =
-    message;
+  return `
+    <span
+      class="ktms-support-status ktms-support-status-${slug(
+        status
+      )}"
+    >
+      ${escapeHtml(status)}
+    </span>
+  `;
 }
 
 
-function setComposeStatus(
-  element,
-  message,
-  type = "info"
-) {
-  if (!element) return;
-
-  element.className =
-    `ktms-message ${type}`;
-
-  element.textContent =
-    message;
+function slug(value) {
+  return String(value)
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
 }
 
 
 function formatDate(value) {
   if (!value) {
-    return "";
+    return "—";
   }
 
   const date =
@@ -1949,15 +1724,33 @@ function formatDate(value) {
       date.getTime()
     )
   ) {
-    return String(value);
+    return escapeHtml(value);
   }
 
-  return date.toLocaleString();
+  return escapeHtml(
+    date.toLocaleString()
+  );
+}
+
+
+function setMessage(message, type = "info") {
+  const element =
+    document.getElementById(
+      "support-message"
+    );
+
+  if (!element) return;
+
+  element.className =
+    `ktms-message ${type}`;
+
+  element.textContent =
+    message || "";
 }
 
 
 function escapeHtml(value) {
-  return String(value ?? "")
+  return String(value)
     .replaceAll("&", "&amp;")
     .replaceAll("<", "&lt;")
     .replaceAll(">", "&gt;")
