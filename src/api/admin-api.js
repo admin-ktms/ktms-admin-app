@@ -13,27 +13,26 @@ export function storeAdminSessionToken(token) {
     return;
   }
 
-  sessionStorage.setItem(ADMIN_SESSION_KEY, token);
+  sessionStorage.setItem(
+    ADMIN_SESSION_KEY,
+    String(token)
+  );
 }
 
 export function clearAdminSessionToken() {
-  sessionStorage.removeItem(ADMIN_SESSION_KEY);
+  sessionStorage.removeItem(
+    ADMIN_SESSION_KEY
+  );
 }
 
 
-/*
- * Pre-authentication administrator login request.
- *
- * This endpoint is deliberately separate from adminApi()
- * because the administrator does not yet have:
- *
- * - a Supabase Auth session
- * - a KTMS administrator session
- *
- * The backend validates the administrator and records
- * the login attempt before requesting the OTP.
- */
-export async function requestAdminVerificationCode(email) {
+/* =========================================================
+   PRE-AUTHENTICATION ADMIN LOGIN
+   ========================================================= */
+
+export async function requestAdminVerificationCode(
+  email
+) {
   const normalizedEmail =
     String(email || "")
       .trim()
@@ -75,12 +74,14 @@ export async function requestAdminVerificationCode(email) {
     );
   }
 
-  if (!response.ok || result?.success !== true) {
-    const message =
+  if (
+    !response.ok ||
+    result?.success !== true
+  ) {
+    const error = new Error(
       result?.error?.message ||
-      `KTMS Admin Login request failed (${response.status}).`;
-
-    const error = new Error(message);
+      `KTMS Admin Login request failed (${response.status}).`
+    );
 
     error.code =
       result?.error?.code ||
@@ -96,18 +97,36 @@ export async function requestAdminVerificationCode(email) {
 }
 
 
-/*
- * Authenticated KTMS Admin API.
- *
- * This is used only after Supabase Auth has
- * successfully created the administrator session.
- */
+/* =========================================================
+   AUTHENTICATED KTMS ADMIN API
+   ========================================================= */
+
 export async function adminApi(
   action,
   payload = {}
 ) {
+  if (!action) {
+    const error = new Error(
+      "KTMS Admin API action is required."
+    );
+
+    error.code = "ACTION_REQUIRED";
+    error.status = 400;
+
+    throw error;
+  }
+
+  /*
+   * Always obtain the current Supabase Auth session.
+   *
+   * The Supabase client is configured with
+   * autoRefreshToken=true, so this gives the
+   * current usable access token after OTP login.
+   */
   const {
-    data: { session },
+    data: {
+      session
+    },
     error: sessionError
   } = await supabase.auth.getSession();
 
@@ -116,21 +135,36 @@ export async function adminApi(
   }
 
   if (!session?.access_token) {
-    throw new Error(
-      "KTMS Admin session is not authenticated."
+    const error = new Error(
+      "KTMS Admin requires an authenticated Supabase session."
     );
+
+    error.code =
+      "SUPABASE_AUTH_REQUIRED";
+
+    error.status = 401;
+
+    throw error;
   }
 
   const headers = {
-    "Content-Type": "application/json",
+    "Content-Type":
+      "application/json",
+
     "Authorization":
       `Bearer ${session.access_token}`
   };
 
+
   /*
-   * admin.session.start creates the KTMS
-   * application session, so it must not require
-   * an existing X-KTMS-Admin-Session header.
+   * admin.session.start is the bridge between:
+   *
+   * Supabase Auth
+   *        ↓
+   * KTMS administrator session
+   *
+   * Therefore it intentionally does NOT require
+   * X-KTMS-Admin-Session yet.
    */
   if (
     action !==
@@ -158,6 +192,7 @@ export async function adminApi(
       adminSessionToken;
   }
 
+
   const response =
     await fetch(
       CONFIG.ADMIN_API_URL,
@@ -173,6 +208,7 @@ export async function adminApi(
       }
     );
 
+
   let result;
 
   try {
@@ -184,16 +220,16 @@ export async function adminApi(
     );
   }
 
+
   if (
     !response.ok ||
     result?.success !== true
   ) {
-    const message =
-      result?.error?.message ||
-      `KTMS Admin API request failed (${response.status}).`;
-
     const error =
-      new Error(message);
+      new Error(
+        result?.error?.message ||
+        `KTMS Admin API request failed (${response.status}).`
+      );
 
     error.code =
       result?.error?.code ||
@@ -203,18 +239,27 @@ export async function adminApi(
       response.status;
 
     /*
-     * Remove the browser-side KTMS session
-     * when the backend says it is no longer valid.
+     * The browser-side KTMS session is no
+     * longer trustworthy if the backend rejects it.
      */
     if (
       result?.error?.code ===
         "SESSION_EXPIRED" ||
+
       result?.error?.code ===
         "SESSION_REJECTED" ||
+
       result?.error?.code ===
-        "KTMS_SESSION_REQUIRED" ||
+        "ADMIN_SESSION_REQUIRED" ||
+
       result?.error?.code ===
-        "ADMIN_SESSION_REQUIRED"
+        "ADMIN_SESSION_INVALID" ||
+
+      result?.error?.code ===
+        "ADMIN_SESSION_REVOKED" ||
+
+      result?.error?.code ===
+        "ADMIN_SESSION_EXPIRED"
     ) {
       clearAdminSessionToken();
     }
