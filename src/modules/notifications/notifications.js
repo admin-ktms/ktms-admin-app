@@ -4,6 +4,7 @@ import {
   getNotificationInbox,
   getNotificationSent,
   getNotificationUnreadCount,
+  getAdminNotificationCommunications,
   markNotificationRead,
   markNotificationUnread,
   retryNotification,
@@ -171,18 +172,37 @@ async function loadNotifications() {
   try {
     state.loading = true;
 
-    const [
-      inbox,
-      sent,
-      unreadCount
-    ] = await Promise.all([
-      getNotificationInbox(),
-      getNotificationSent(),
-      getNotificationUnreadCount()
-    ]);
+  const requests = [
+    getNotificationInbox(),
+    getNotificationSent(),
+    getNotificationUnreadCount()
+  ];
+  
+  const isGameMaster =
+    admin?.role === "Game Master";
+  
+  if (isGameMaster) {
+    requests.push(
+      getAdminNotificationCommunications()
+    );
+  }
+  
+  const results =
+    await Promise.all(requests);
+  
+  const inbox = results[0];
+  const sent = results[1];
+  const unreadCount = results[2];
+  
+  const adminCommunications =
+    isGameMaster
+      ? results[3]
+      : [];
 
     state.inbox = normalizeRows(inbox);
     state.sent = normalizeRows(sent);
+    state.adminCommunications =
+      normalizeRows(adminCommunications);
     state.unreadCount =
       Number(unreadCount || 0);
 
@@ -237,12 +257,171 @@ function renderCurrentTab() {
     return;
   }
 
+  if (state.activeTab === "admin-oversight") {
+  renderAdminOversight();
+  return;
+}
+
   if (state.activeTab === "compose") {
     renderCompose();
   }
 }
 
+function getFilteredNotifications(
+  rows,
+  filters
+) {
+  return rows.filter((notification) => {
+    const readStatus =
+      notification.read_status ||
+      notification.readStatus ||
+      "Unread";
+
+    const type =
+      notification.notification_type ||
+      notification.notificationType ||
+      "";
+
+    const mode =
+      notification.notification_mode ||
+      notification.notificationMode ||
+      "";
+
+    const readMatches =
+      filters.readStatus === "All" ||
+      readStatus === filters.readStatus;
+
+    const typeMatches =
+      filters.notificationType === "All" ||
+      type === filters.notificationType;
+
+    const modeMatches =
+      filters.notificationMode === "All" ||
+      mode === filters.notificationMode;
+
+    return (
+      readMatches &&
+      typeMatches &&
+      modeMatches
+    );
+  });
+}
+
+function renderNotificationFilters(
+  context,
+  rows
+) {
+  const filters =
+    context === "sent"
+      ? state.sentFilters
+      : state.inboxFilters;
+
+  const types = [
+    ...new Set(
+      rows
+        .map(
+          (row) =>
+            row.notification_type ||
+            row.notificationType
+        )
+        .filter(Boolean)
+    )
+  ];
+
+  const modes = [
+    ...new Set(
+      rows
+        .map(
+          (row) =>
+            row.notification_mode ||
+            row.notificationMode
+        )
+        .filter(Boolean)
+    )
+  ];
+
+  return `
+    <div
+      class="ktms-notification-filters"
+      data-filter-context="${context}"
+    >
+
+      <label>
+        Read
+        <select
+          data-notification-filter="readStatus"
+        >
+          <option value="All"
+            ${filters.readStatus === "All" ? "selected" : ""}>
+            All
+          </option>
+
+          <option value="Unread"
+            ${filters.readStatus === "Unread" ? "selected" : ""}>
+            Unread
+          </option>
+
+          <option value="Read"
+            ${filters.readStatus === "Read" ? "selected" : ""}>
+            Read
+          </option>
+        </select>
+      </label>
+
+      <label>
+        Notification Type
+        <select
+          data-notification-filter="notificationType"
+        >
+          <option value="All">All</option>
+
+          ${types.map((type) => `
+            <option
+              value="${escapeAttribute(type)}"
+              ${filters.notificationType === type ? "selected" : ""}
+            >
+              ${escapeHtml(type)}
+            </option>
+          `).join("")}
+        </select>
+      </label>
+
+      <label>
+        Notification Mode
+        <select
+          data-notification-filter="notificationMode"
+        >
+          <option value="All">All</option>
+
+          ${modes.map((mode) => `
+            <option
+              value="${escapeAttribute(mode)}"
+              ${filters.notificationMode === mode ? "selected" : ""}
+            >
+              ${escapeHtml(mode)}
+            </option>
+          `).join("")}
+        </select>
+      </label>
+
+      <button
+        type="button"
+        class="ktms-secondary-button"
+        data-notification-filter-reset="${context}"
+      >
+        RESET
+      </button>
+
+    </div>
+  `;
+}
+
 function renderInbox() {
+  const filtered =
+  getFilteredNotifications(
+    state.inbox,
+    state.inboxFilters
+  );
   const content =
     document.getElementById(
       "notifications-content"
@@ -260,24 +439,42 @@ function renderInbox() {
   }
 
   content.innerHTML = `
-    <div class="ktms-notification-list">
-
-      ${state.inbox
-        .map((notification) =>
-          renderNotificationCard(
-            notification,
-            "inbox"
+    ${renderNotificationFilters(
+      "inbox",
+      state.inbox
+    )}
+  
+    ${
+      !filtered.length
+        ? emptyState(
+            "No matching notifications.",
+            "Change or reset the filters to view other notifications."
           )
-        )
-        .join("")}
-
-    </div>
+        : `
+          <div class="ktms-notification-list">
+            ${filtered
+              .map((notification) =>
+                renderNotificationCard(
+                  notification,
+                  "inbox"
+                )
+              )
+              .join("")}
+          </div>
+        `
+    }
   `;
 
-  bindNotificationActions();
+   bindNotificationActions();
+   bindNotificationFilters("inbox");
 }
 
 function renderSent() {
+  const filtered =
+  getFilteredNotifications(
+    state.sent,
+    state.sentFilters
+  );
   const content =
     document.getElementById(
       "notifications-content"
@@ -295,21 +492,119 @@ function renderSent() {
   }
 
   content.innerHTML = `
-    <div class="ktms-notification-list">
-
-      ${state.sent
-        .map((notification) =>
-          renderNotificationCard(
-            notification,
-            "sent"
+    ${renderNotificationFilters(
+      "sent",
+      state.sent
+    )}
+  
+    ${
+      !filtered.length
+        ? emptyState(
+            "No matching sent notifications.",
+            "Change or reset the filters to view other notifications."
           )
-        )
-        .join("")}
-
-    </div>
+        : `
+          <div class="ktms-notification-list">
+            ${filtered
+              .map((notification) =>
+                renderNotificationCard(
+                  notification,
+                  "sent"
+                )
+              )
+              .join("")}
+          </div>
+        `
+    }
   `;
 
   bindNotificationActions();
+  bindNotificationFilters("sent");
+
+}
+
+function bindNotificationFilters(context) {
+  const filters =
+    context === "sent"
+      ? state.sentFilters
+      : state.inboxFilters;
+
+  document
+    .querySelectorAll(
+      `[data-filter-context="${context}"] [data-notification-filter]`
+    )
+    .forEach((select) => {
+      select.addEventListener("change", () => {
+        filters[select.dataset.notificationFilter] =
+          select.value;
+
+        if (context === "sent") {
+          renderSent();
+        } else {
+          renderInbox();
+        }
+      });
+    });
+
+  document
+    .querySelector(
+      `[data-notification-filter-reset="${context}"]`
+    )
+    ?.addEventListener("click", () => {
+      filters.readStatus = "All";
+      filters.notificationType = "All";
+      filters.notificationMode = "All";
+
+      if (context === "sent") {
+        renderSent();
+      } else {
+        renderInbox();
+      }
+    });
+}
+
+function renderAdminOversight() {
+  const content =
+    document.getElementById(
+      "notifications-content"
+    );
+
+  if (!content) return;
+
+  const rows =
+    state.adminCommunications;
+
+  if (!rows.length) {
+    content.innerHTML = emptyState(
+      "No administrator communications.",
+      "Administrator-to-administrator communications will appear here."
+    );
+
+    return;
+  }
+
+  content.innerHTML = `
+    <div class="ktms-admin-oversight-header">
+      <div>
+        <h3>Administrator Communications</h3>
+        <p>
+          Game Master oversight of administrator-to-administrator
+          communications.
+        </p>
+      </div>
+    </div>
+
+    <div class="ktms-notification-list">
+      ${rows
+        .map((notification) =>
+          renderNotificationCard(
+            notification,
+            "admin-oversight"
+          )
+        )
+        .join("")}
+    </div>
+  `;
 }
 
 function renderNotificationCard(
@@ -594,13 +889,26 @@ async function renderCompose(admin) {
             </select>
           </label>
 
-          <label>
+                    <label>
             Recipient
-
-            <select
-              id="notification-recipient-id"
+          
+            <input
+              id="notification-recipient-search"
+              type="text"
+              list="notification-recipient-options"
+              placeholder="Search by name, ID or email..."
+              autocomplete="off"
               required
-            ></select>
+            />
+          
+            <datalist
+              id="notification-recipient-options"
+            ></datalist>
+          
+            <input
+              id="notification-recipient-id"
+              type="hidden"
+            />
           </label>
 
           <label>
@@ -800,71 +1108,102 @@ function populateRecipientSelect() {
       "notification-recipient-type"
     )?.value || "Player";
 
-  const select =
+  const search =
+    document.getElementById(
+      "notification-recipient-search"
+    );
+
+  const hidden =
     document.getElementById(
       "notification-recipient-id"
     );
 
-  if (!select) return;
+  const datalist =
+    document.getElementById(
+      "notification-recipient-options"
+    );
+
+  if (!search || !hidden || !datalist) {
+    return;
+  }
 
   const rows =
     type === "Admin"
       ? state.admins
       : state.players;
 
-  select.innerHTML = `
-    <option value="">
-      Select ${type.toLowerCase()}...
-    </option>
-
-    ${rows
+  datalist.innerHTML =
+    rows
       .map((row) => {
         const id =
           type === "Admin"
-            ? row.admin_id ||
-              row.adminId
-            : row.player_id ||
-              row.playerId;
+            ? row.admin_id
+            : row.player_id;
 
         const name =
           type === "Admin"
-            ? row.display_name ||
-              row.displayName ||
-              row.login_email ||
-              row.loginEmail ||
-              id
-            : row.display_name ||
-              row.displayName ||
-              row.player_name ||
-              row.playerName ||
-              id;
+            ? row.display_name
+            : row.manager_name;
 
-        const status =
-          type === "Admin"
-            ? row.admin_status ||
-              row.adminStatus
-            : row.player_status ||
-              row.playerStatus;
-
-        if (!id) return "";
-
-        if (
-          type === "Admin" &&
-          status &&
-          status !== "Active"
-        ) {
-          return "";
-        }
+        const email =
+          row.login_email ||
+          row.email_address ||
+          "";
 
         return `
-          <option value="${escapeAttribute(id)}">
-            ${escapeHtml(name)}
-            — ${escapeHtml(id)}
-          </option>
+          <option
+            value="${escapeAttribute(
+              name || id || ""
+            )}"
+            label="${escapeAttribute(
+              `${id || ""}${email ? ` · ${email}` : ""}`
+            )}"
+            data-recipient-id="${escapeAttribute(
+              id || ""
+            )}"
+          ></option>
         `;
       })
-      .join("")}
-  `;
+      .join("");
+
+  search.value = "";
+  hidden.value = "";
+
+  search.oninput = () => {
+    const value =
+      search.value.trim().toLowerCase();
+
+    const match =
+      rows.find((row) => {
+        const id =
+          type === "Admin"
+            ? row.admin_id
+            : row.player_id;
+
+        const name =
+          type === "Admin"
+            ? row.display_name
+            : row.manager_name;
+
+        const email =
+          row.login_email ||
+          row.email_address ||
+          "";
+
+        return (
+          String(id || "").toLowerCase() === value ||
+          String(name || "").toLowerCase() === value ||
+          String(email || "").toLowerCase() === value
+        );
+      });
+
+    hidden.value =
+      match
+        ? type === "Admin"
+          ? match.admin_id
+          : match.player_id
+        : "";
+  };
 }
 
 async function handleComposeSubmit(
