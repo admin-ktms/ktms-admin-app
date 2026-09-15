@@ -501,66 +501,128 @@ function renderMatchdays(matchdays) {
             row.matchday_name ??
             "Matchday";
 
+          const matchdayId =
+            row.matchdayId ??
+            row.matchday_id ??
+            matchdayNumber;
+
           return `
-            <div
+            <article
               class="
                 ktms-progression-matchday
+                is-collapsed
               "
+              data-matchday-id="${escapeHtml(
+                matchdayId
+              )}"
             >
 
-              <div
+              <button
+                type="button"
                 class="
-                  ktms-progression-matchday-number
+                  ktms-progression-matchday-toggle
                 "
-              >
-                ${matchdayNumber}
-              </div>
-
-              <div
-                class="
-                  ktms-progression-matchday-main
-                "
+                aria-expanded="false"
+                aria-controls="progression-matchday-${escapeHtml(
+                  matchdayId
+                )}"
               >
 
-                <div
+                <span
                   class="
-                    ktms-progression-matchday-title-row
+                    ktms-progression-matchday-number
                   "
                 >
-                  <strong>
-                    ${escapeHtml(
-                      matchdayName
-                    )}
-                  </strong>
+                  ${matchdayNumber}
+                </span>
+
+                <span
+                  class="
+                    ktms-progression-matchday-main
+                  "
+                >
 
                   <span
-                    class="${statusClass(status)}"
+                    class="
+                      ktms-progression-matchday-title-row
+                    "
                   >
-                    ${escapeHtml(status)}
+
+                    <strong>
+                      ${escapeHtml(
+                        matchdayName
+                      )}
+                    </strong>
+
+                    <span
+                      class="${statusClass(status)}"
+                    >
+                      ${escapeHtml(status)}
+                    </span>
+
                   </span>
-                </div>
+
+                  <span
+                    class="
+                      ktms-progression-matchday-summary
+                    "
+                  >
+                    ${total} fixtures
+                    ·
+                    ${resolved} resolved
+                    ·
+                    ${unresolved} unresolved
+                  </span>
+
+                </span>
+
+                <span
+                  class="
+                    ktms-progression-matchday-chevron
+                  "
+                  aria-hidden="true"
+                >
+                  ›
+                </span>
+
+              </button>
+
+              <div
+                id="progression-matchday-${escapeHtml(
+                  matchdayId
+                )}"
+                class="
+                  ktms-progression-matchday-content
+                "
+                hidden
+              >
 
                 <div
                   class="
                     ktms-progression-matchday-meta
                   "
                 >
+
                   <span>
-                    ${total} fixtures
+                    <strong>${total}</strong>
+                    fixtures
                   </span>
 
                   <span>
-                    ${resolved} resolved
+                    <strong>${resolved}</strong>
+                    resolved
                   </span>
 
                   <span>
-                    ${unresolved} unresolved
+                    <strong>${unresolved}</strong>
+                    unresolved
                   </span>
+
                 </div>
 
               </div>
 
-            </div>
+            </article>
           `;
         })
         .join("")}
@@ -801,34 +863,64 @@ function render(content) {
             <div
               class="
                 ktms-progression-section
+                ktms-progression-matchday-section
               "
             >
-
-              <div
+            
+              <button
+                type="button"
                 class="
-                  ktms-progression-section-heading
+                  ktms-progression-section-toggle
+                "
+                aria-expanded="true"
+                aria-controls="progression-matchday-progress"
+              >
+            
+                <span
+                  class="
+                    ktms-progression-section-heading
+                  "
+                >
+            
+                  <span>
+            
+                    <h3>
+                      Matchday Progress
+                    </h3>
+            
+                    <p>
+                      Fixtures resolve through
+                      the KT result workflow.
+                    </p>
+            
+                  </span>
+            
+                </span>
+            
+                <span
+                  class="
+                    ktms-progression-section-chevron
+                  "
+                  aria-hidden="true"
+                >
+                  ›
+                </span>
+            
+              </button>
+            
+              <div
+                id="progression-matchday-progress"
+                class="
+                  ktms-progression-section-content
                 "
               >
-
-                <div>
-
-                  <h3>
-                    Matchday Progress
-                  </h3>
-
-                  <p>
-                    Fixtures resolve through
-                    the KT result workflow.
-                  </p>
-
-                </div>
-
+            
+                ${renderMatchdays(
+                  data.matchdays
+                )}
+            
               </div>
-
-              ${renderMatchdays(
-                data.matchdays
-              )}
-
+            
             </div>
 
             <div
@@ -935,6 +1027,89 @@ function render(content) {
       render(content);
     }
   );
+
+    const matchdaySectionToggle =
+    document.querySelector(
+      ".ktms-progression-section-toggle"
+    );
+
+  const matchdaySectionContent =
+    document.getElementById(
+      "progression-matchday-progress"
+    );
+
+  matchdaySectionToggle?.addEventListener(
+    "click",
+    () => {
+      const expanded =
+        matchdaySectionToggle.getAttribute(
+          "aria-expanded"
+        ) === "true";
+
+      matchdaySectionToggle.setAttribute(
+        "aria-expanded",
+        String(!expanded)
+      );
+
+      matchdaySectionContent.hidden =
+        expanded;
+
+      matchdaySectionToggle
+        .closest(
+          ".ktms-progression-matchday-section"
+        )
+        ?.classList.toggle(
+          "is-collapsed",
+          expanded
+        );
+    }
+  );
+
+  content
+    .querySelectorAll(
+      ".ktms-progression-matchday-toggle"
+    )
+    .forEach((toggle) => {
+      toggle.addEventListener(
+        "click",
+        () => {
+          const matchday =
+            toggle.closest(
+              ".ktms-progression-matchday"
+            );
+
+          const matchdayId =
+            toggle.getAttribute(
+              "aria-controls"
+            );
+
+          const details =
+            document.getElementById(
+              matchdayId
+            );
+
+          const expanded =
+            toggle.getAttribute(
+              "aria-expanded"
+            ) === "true";
+
+          toggle.setAttribute(
+            "aria-expanded",
+            String(!expanded)
+          );
+
+          if (details) {
+            details.hidden =
+              expanded;
+          }
+
+          matchday?.classList.toggle(
+            "is-collapsed",
+            expanded
+          );
+        }
+      );
+    });
 }
 
 /* =========================================================
