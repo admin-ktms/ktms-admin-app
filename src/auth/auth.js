@@ -2,15 +2,38 @@ import { supabase } from "../lib/supabase.js";
 
 import {
   adminApi,
+  requestAdminVerificationCode,
   getStoredAdminSessionToken,
   storeAdminSessionToken,
   clearAdminSessionToken
 } from "../api/admin-api.js";
 
 
-export async function sendVerificationCode(email) {
+/*
+ * Requests an administrator verification code.
+ *
+ * IMPORTANT:
+ *
+ * The browser must NOT call
+ * supabase.auth.signInWithOtp()
+ * directly here.
+ *
+ * The request first goes through the
+ * KTMS admin-login Edge Function so that
+ * KTMS can:
+ *
+ * 1. Validate the administrator.
+ * 2. Apply login-request controls.
+ * 3. Record admin_login_attempts.
+ * 4. Request the Supabase Auth OTP.
+ */
+export async function sendVerificationCode(
+  email
+) {
   const normalizedEmail =
-    email.trim().toLowerCase();
+    String(email || "")
+      .trim()
+      .toLowerCase();
 
   if (!normalizedEmail) {
     throw new Error(
@@ -18,31 +41,34 @@ export async function sendVerificationCode(email) {
     );
   }
 
-  const { error } =
-    await supabase.auth.signInWithOtp({
-      email: normalizedEmail,
-      options: {
-        shouldCreateUser: false
-      }
-    });
-
-  if (error) {
-    throw error;
-  }
+  await requestAdminVerificationCode(
+    normalizedEmail
+  );
 
   return true;
 }
 
 
+/*
+ * Verifies the OTP received by the
+ * administrator through Supabase Auth.
+ *
+ * This remains a direct Supabase Auth
+ * operation because the administrator now
+ * possesses the verification code.
+ */
 export async function verifyVerificationCode(
   email,
   token
 ) {
   const normalizedEmail =
-    email.trim().toLowerCase();
+    String(email || "")
+      .trim()
+      .toLowerCase();
 
   const normalizedToken =
-    token.trim();
+    String(token || "")
+      .trim();
 
   if (!normalizedEmail) {
     throw new Error(
