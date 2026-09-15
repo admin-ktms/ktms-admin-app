@@ -12,11 +12,28 @@ import {
 
 const state = {
   activeTab: "inbox",
+
   inbox: [],
   sent: [],
+  adminCommunications: [],
+
   unreadCount: 0,
+
   players: [],
   admins: [],
+
+  inboxFilters: {
+    readStatus: "All",
+    notificationType: "All",
+    notificationMode: "All"
+  },
+
+  sentFilters: {
+    readStatus: "All",
+    notificationType: "All",
+    notificationMode: "All"
+  },
+
   loading: false
 };
 
@@ -76,6 +93,20 @@ export async function renderNotifications(
         >
           Sent
         </button>
+
+        ${
+          admin?.role === "Game Master"
+            ? `
+              <button
+                type="button"
+                class="ktms-notification-tab"
+                data-notification-tab="admin-oversight"
+              >
+                Admin Oversight
+              </button>
+            `
+            : ""
+        }
 
         <button
           type="button"
