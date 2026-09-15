@@ -3,6 +3,10 @@ import { CONFIG } from "../config.js";
 
 const ADMIN_SESSION_KEY = "ktms_admin_session";
 
+/* =========================================================
+   KTMS ADMIN SESSION TOKEN
+   ========================================================= */
+
 export function getStoredAdminSessionToken() {
   return sessionStorage.getItem(ADMIN_SESSION_KEY) || "";
 }
@@ -20,23 +24,90 @@ export function storeAdminSessionToken(token) {
 }
 
 export function clearAdminSessionToken() {
-  sessionStorage.removeItem(
-    ADMIN_SESSION_KEY
-  );
+  sessionStorage.removeItem(ADMIN_SESSION_KEY);
 }
 
-
 /* =========================================================
-   PRE-AUTHENTICATION ADMIN LOGIN
+   BACKEND LOGIN ENGINE
    ========================================================= */
 
-export async function requestAdminVerificationCode(
-  email
+/**
+ * Request the administrator OTP.
+ *
+ * Backend:
+ * POST /ktms-admin-login
+ * { action: "request", email }
+ */
+export async function requestAdminVerificationCode(email) {
+  const normalizedEmail = String(email || "")
+    .trim()
+    .toLowerCase();
+
+  if (!normalizedEmail) {
+    const error = new Error("Email address is required.");
+    error.code = "EMAIL_REQUIRED";
+    error.status = 400;
+    throw error;
+  }
+
+  const response = await fetch(
+    CONFIG.ADMIN_LOGIN_API_URL,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        action: "request",
+        email: normalizedEmail
+      })
+    }
+  );
+
+  const result = await parseJsonResponse(
+    response,
+    "Administrator login request"
+  );
+
+  if (!response.ok || result?.success !== true) {
+    const error = new Error(
+      result?.error?.message ||
+      "Administrator verification request failed."
+    );
+
+    error.code =
+      result?.error?.code ||
+      "ADMIN_LOGIN_ERROR";
+
+    error.status = response.status;
+
+    throw error;
+  }
+
+  return result.data;
+}
+
+/**
+ * Verify OTP through the new backend login engine.
+ *
+ * Backend returns:
+ * - accessToken
+ * - refreshToken
+ * - expiresIn
+ * - expiresAt
+ * - userId
+ * - admin
+ */
+export async function verifyAdminVerificationCode(
+  email,
+  token
 ) {
-  const normalizedEmail =
-    String(email || "")
-      .trim()
-      .toLowerCase();
+  const normalizedEmail = String(email || "")
+    .trim()
+    .toLowerCase();
+
+  const normalizedToken = String(token || "")
+    .trim();
 
   if (!normalizedEmail) {
     const error = new Error(
@@ -49,53 +120,129 @@ export async function requestAdminVerificationCode(
     throw error;
   }
 
-  const response = await fetch(
-    CONFIG.ADMIN_LOGIN_API_URL,
-    {
-      method: "POST",
-
-      headers: {
-        "Content-Type": "application/json"
-      },
-
-      body: JSON.stringify({
-        email: normalizedEmail
-      })
-    }
-  );
-
-  let result;
-
-  try {
-    result = await response.json();
-  } catch {
-    throw new Error(
-      `KTMS Admin Login API returned a non-JSON response (${response.status}).`
-    );
-  }
-
-  if (
-    !response.ok ||
-    result?.success !== true
-  ) {
+  if (!normalizedToken) {
     const error = new Error(
-      result?.error?.message ||
-      `KTMS Admin Login request failed (${response.status}).`
+      "Verification code is required."
     );
 
-    error.code =
-      result?.error?.code ||
-      "ADMIN_LOGIN_ERROR";
-
-    error.status =
-      response.status;
+    error.code = "OTP_REQUIRED";
+    error.status = 400;
 
     throw error;
   }
 
-  return result.data;
+  const response = await fetch(
+    CONFIG.ADMIN_LOGIN_API_URL,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        action: "verify",
+        email: normalizedEmail,
+        token: normalizedToken
+      })
+    }
+  );
+
+  const result = await parseJsonResponse(
+    response,
+    "Administrator verification"
+  );
+
+  if (!response.ok || result?.success !== true) {
+    const error = new Error(
+      result?.error?.message ||
+      "Administrator verification failed."
+    );
+
+    error.code =
+      result?.error?.code ||
+      "OTP_VERIFICATION_FAILED";
+
+    error.status = response.status;
+
+    throw error;
+  }
+
+  const data = result?.data;
+
+  if (!data?.accessToken || !data?.refreshToken) {
+    const error = new Error(
+      "Authenticated session was not returned by the login service."
+    );
+
+    error.code = "AUTH_SESSION_MISSING";
+    error.status = 401;
+
+    throw error;
+  }
+
+  return data;
 }
 
+/* =========================================================
+   SUPABASE SESSION ESTABLISHMENT
+   ========================================================= */
+
+/**
+ * Install the authenticated Supabase session returned
+ * by ktms-admin-login.
+ *
+ * This is the critical difference from the old login flow.
+ *
+ * Old:
+ * browser verifyOtp()
+ * browser getSession()
+ *
+ * New:
+ * backend verifyOtp()
+ * backend returns tokens
+ * browser setSession()
+ */
+export async function establishSupabaseSession(
+  loginData
+) {
+  if (
+    !loginData?.accessToken ||
+    !loginData?.refreshToken
+  ) {
+    const error = new Error(
+      "Supabase authentication session data is incomplete."
+    );
+
+    error.code = "AUTH_SESSION_MISSING";
+    error.status = 401;
+
+    throw error;
+  }
+
+  const {
+    data,
+    error
+  } = await supabase.auth.setSession({
+    access_token: loginData.accessToken,
+    refresh_token: loginData.refreshToken
+  });
+
+  if (error) {
+    throw error;
+  }
+
+  if (!data?.session?.access_token) {
+    const error = new Error(
+      "Supabase authentication session could not be established."
+    );
+
+    error.code = "AUTH_SESSION_FAILED";
+    error.status = 401;
+
+    throw error;
+  }
+
+  return data.session;
+}
 
 /* =========================================================
    AUTHENTICATED KTMS ADMIN API
@@ -116,13 +263,6 @@ export async function adminApi(
     throw error;
   }
 
-  /*
-   * Always obtain the current Supabase Auth session.
-   *
-   * The Supabase client is configured with
-   * autoRefreshToken=true, so this gives the
-   * current usable access token after OTP login.
-   */
   const {
     data: {
       session
@@ -136,40 +276,32 @@ export async function adminApi(
 
   if (!session?.access_token) {
     const error = new Error(
-      "KTMS Admin requires an authenticated Supabase session."
+      "Authenticated Supabase session required."
     );
 
-    error.code =
-      "SUPABASE_AUTH_REQUIRED";
-
+    error.code = "SUPABASE_AUTH_REQUIRED";
     error.status = 401;
 
     throw error;
   }
 
   const headers = {
-    "Content-Type":
-      "application/json",
-
+    "Content-Type": "application/json",
     "Authorization":
       `Bearer ${session.access_token}`
   };
 
-
   /*
-   * admin.session.start is the bridge between:
+   * admin.session.start is the bridge:
    *
    * Supabase Auth
-   *        ↓
-   * KTMS administrator session
+   *       ↓
+   * KTMS Admin Session
    *
-   * Therefore it intentionally does NOT require
-   * X-KTMS-Admin-Session yet.
+   * Therefore it does not require the KTMS
+   * session header yet.
    */
-  if (
-    action !==
-    "admin.session.start"
-  ) {
+  if (action !== "admin.session.start") {
     const adminSessionToken =
       getStoredAdminSessionToken();
 
@@ -188,48 +320,34 @@ export async function adminApi(
 
     headers[
       "X-KTMS-Admin-Session"
-    ] =
-      adminSessionToken;
+    ] = adminSessionToken;
   }
 
+  const response = await fetch(
+    CONFIG.ADMIN_API_URL,
+    {
+      method: "POST",
+      headers,
+      body: JSON.stringify({
+        action,
+        ...payload
+      })
+    }
+  );
 
-  const response =
-    await fetch(
-      CONFIG.ADMIN_API_URL,
-      {
-        method: "POST",
-
-        headers,
-
-        body: JSON.stringify({
-          action,
-          ...payload
-        })
-      }
-    );
-
-
-  let result;
-
-  try {
-    result =
-      await response.json();
-  } catch {
-    throw new Error(
-      `KTMS Admin API returned a non-JSON response (${response.status}).`
-    );
-  }
-
+  const result = await parseJsonResponse(
+    response,
+    "KTMS Admin API"
+  );
 
   if (
     !response.ok ||
     result?.success !== true
   ) {
-    const error =
-      new Error(
-        result?.error?.message ||
-        `KTMS Admin API request failed (${response.status}).`
-      );
+    const error = new Error(
+      result?.error?.message ||
+      "KTMS Admin API request failed."
+    );
 
     error.code =
       result?.error?.code ||
@@ -238,28 +356,13 @@ export async function adminApi(
     error.status =
       response.status;
 
-    /*
-     * The browser-side KTMS session is no
-     * longer trustworthy if the backend rejects it.
-     */
     if (
-      result?.error?.code ===
-        "SESSION_EXPIRED" ||
-
-      result?.error?.code ===
-        "SESSION_REJECTED" ||
-
-      result?.error?.code ===
-        "ADMIN_SESSION_REQUIRED" ||
-
-      result?.error?.code ===
-        "ADMIN_SESSION_INVALID" ||
-
-      result?.error?.code ===
-        "ADMIN_SESSION_REVOKED" ||
-
-      result?.error?.code ===
+      [
+        "ADMIN_SESSION_REQUIRED",
+        "ADMIN_SESSION_INVALID",
+        "ADMIN_SESSION_REVOKED",
         "ADMIN_SESSION_EXPIRED"
+      ].includes(error.code)
     ) {
       clearAdminSessionToken();
     }
@@ -268,4 +371,30 @@ export async function adminApi(
   }
 
   return result.data;
+}
+
+/* =========================================================
+   RESPONSE PARSER
+   ========================================================= */
+
+async function parseJsonResponse(
+  response,
+  operation
+) {
+  let result;
+
+  try {
+    result = await response.json();
+  } catch {
+    const error = new Error(
+      `${operation} returned an invalid server response.`
+    );
+
+    error.code = "INVALID_SERVER_RESPONSE";
+    error.status = response.status;
+
+    throw error;
+  }
+
+  return result;
 }
