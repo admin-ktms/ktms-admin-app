@@ -10,9 +10,7 @@ import {
   clearAdminSessionToken
 } from "../api/admin-api.js";
 
-/* =========================================================
-   REQUEST VERIFICATION CODE
-   ========================================================= */
+// LOGIN REQUEST
 
 export async function sendVerificationCode(email) {
   const normalizedEmail = String(email || "")
@@ -20,36 +18,17 @@ export async function sendVerificationCode(email) {
     .toLowerCase();
 
   if (!normalizedEmail) {
-    const error = new Error(
-      "Email address is required."
-    );
-
+    const error = new Error("Email address is required.");
     error.code = "EMAIL_REQUIRED";
-
     throw error;
   }
 
-  return await requestAdminVerificationCode(
-    normalizedEmail
-  );
+  return await requestAdminVerificationCode(normalizedEmail);
 }
 
-/* =========================================================
-   VERIFY ADMIN LOGIN
-   ========================================================= */
+// LOGIN VERIFICATION
 
-/**
- * Complete authentication sequence:
- *
- * 1. Backend verifies OTP.
- * 2. Backend returns Supabase Auth tokens.
- * 3. Browser installs those tokens.
- * 4. Browser now has a genuine Supabase Auth session.
- */
-export async function verifyVerificationCode(
-  email,
-  token
-) {
+export async function verifyVerificationCode(email, token) {
   const normalizedEmail = String(email || "")
     .trim()
     .toLowerCase();
@@ -58,83 +37,49 @@ export async function verifyVerificationCode(
     .trim();
 
   if (!normalizedEmail) {
-    const error = new Error(
-      "Email address is required."
-    );
-
+    const error = new Error("Email address is required.");
     error.code = "EMAIL_REQUIRED";
-
     throw error;
   }
 
   if (!normalizedToken) {
-    const error = new Error(
-      "Verification code is required."
-    );
-
+    const error = new Error("Verification code is required.");
     error.code = "OTP_REQUIRED";
-
     throw error;
   }
 
-  const loginData =
-    await verifyAdminVerificationCode(
-      normalizedEmail,
-      normalizedToken
-    );
+  const loginData = await verifyAdminVerificationCode(
+    normalizedEmail,
+    normalizedToken
+  );
 
-  const session =
-    await establishSupabaseSession(
-      loginData
-    );
+  const session = await establishSupabaseSession(loginData);
 
-  return {
-    session,
-    admin: loginData.admin,
-    userId: loginData.userId
-  };
-}
-
-/* =========================================================
-   CREATE KTMS ADMIN SESSION
-   ========================================================= */
-
-export async function startAdminSession() {
-  const data =
-    await adminApi(
-      "admin.session.start"
-    );
-
-  const sessionToken =
-    data?.sessionToken;
-
-  if (!sessionToken) {
+  if (!loginData?.sessionToken) {
     const error = new Error(
       "KTMS administrator session was not created."
     );
 
-    error.code =
-      "KTMS_SESSION_CREATE_FAILED";
-
+    error.code = "KTMS_SESSION_CREATE_FAILED";
     throw error;
   }
 
-  storeAdminSessionToken(
-    sessionToken
-  );
+  storeAdminSessionToken(loginData.sessionToken);
 
-  return data;
+  return {
+    session,
+    admin: loginData.admin,
+    userId: loginData.userId,
+    adminSessionId: loginData.adminSessionId,
+    adminSessionExpiresAt: loginData.adminSessionExpiresAt
+  };
 }
 
-/* =========================================================
-   CURRENT SUPABASE SESSION
-   ========================================================= */
+// CURRENT SESSION
 
 export async function getCurrentSession() {
   const {
-    data: {
-      session
-    },
+    data: { session },
     error
   } = await supabase.auth.getSession();
 
@@ -145,61 +90,13 @@ export async function getCurrentSession() {
   return session;
 }
 
-/* =========================================================
-   CURRENT ADMIN IDENTITY
-   ========================================================= */
+// CURRENT ADMIN
 
 export async function getAdminIdentity() {
-  return await adminApi(
-    "admin.me"
-  );
+  return await adminApi("admin.me");
 }
 
-/* =========================================================
-   COMPLETE LOGIN
-   ========================================================= */
-
-export async function completeAdminLogin(
-  email,
-  token
-) {
-  /*
-   * STEP 1
-   * Backend verifies OTP and returns
-   * Supabase Auth credentials.
-   */
-  const authentication =
-    await verifyVerificationCode(
-      email,
-      token
-    );
-
-  /*
-   * STEP 2
-   * Supabase Auth session is now installed
-   * in the browser.
-   */
-
-  /*
-   * STEP 3
-   * Exchange Supabase identity for the
-   * KTMS administrator session.
-   */
-  await startAdminSession();
-
-  /*
-   * STEP 4
-   * Ask the protected Admin API who we are.
-   */
-  const admin =
-    await getAdminIdentity();
-
-  return admin;
-}
-
-/* =========================================================
-   LOGOUT
-   ========================================================= */
+// LOGOUT
 
 export async function logout() {
   const adminSessionToken =
@@ -220,9 +117,8 @@ export async function logout() {
 
   clearAdminSessionToken();
 
-  const {
-    error
-  } = await supabase.auth.signOut();
+  const { error } =
+    await supabase.auth.signOut();
 
   if (error) {
     throw error;
