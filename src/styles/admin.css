@@ -7031,20 +7031,16 @@ a:hover {
 }
 
 .ktms-award-tab {
+  padding: 10px 14px;
   border: 0;
   border-bottom: 2px solid transparent;
   background: transparent;
   color: var(--ktms-text-muted);
-  padding: 10px 14px;
-}
-
-.ktms-award-tab:hover {
-  color: var(--ktms-text);
 }
 
 .ktms-award-tab.active {
-  color: var(--ktms-primary);
   border-bottom-color: var(--ktms-primary);
+  color: var(--ktms-primary);
 }
 
 .ktms-award-summary-grid {
@@ -7055,22 +7051,22 @@ a:hover {
 }
 
 .ktms-award-summary-card {
-  background: var(--ktms-surface);
+  padding: 16px;
   border: 1px solid var(--ktms-border);
   border-radius: var(--ktms-radius-md);
-  padding: 16px;
+  background: var(--ktms-surface);
 }
 
 .ktms-award-summary-card span {
   display: block;
+  margin-bottom: 5px;
   color: var(--ktms-text-muted);
   font-size: 12px;
-  margin-bottom: 5px;
 }
 
 .ktms-award-summary-card strong {
-  font-size: 24px;
   color: var(--ktms-text);
+  font-size: 24px;
 }
 
 .ktms-award-action-banner {
@@ -7078,10 +7074,13 @@ a:hover {
   align-items: center;
   justify-content: space-between;
   gap: 16px;
+
   margin-bottom: 18px;
   padding: 16px 18px;
+
   border: 1px solid var(--ktms-gold-border);
   border-radius: var(--ktms-radius-md);
+
   background: var(--ktms-gold-soft);
 }
 
@@ -7097,32 +7096,35 @@ a:hover {
 .ktms-award-status {
   display: inline-flex;
   align-items: center;
+
   padding: 4px 8px;
-  border-radius: 999px;
+
   border: 1px solid var(--ktms-border);
+  border-radius: 999px;
+
   font-size: 12px;
 }
 
 .ktms-award-status-pending {
-  color: var(--ktms-gold);
   border-color: var(--ktms-gold-border);
   background: var(--ktms-gold-soft);
+  color: var(--ktms-gold);
 }
 
 .ktms-award-status-approved {
-  color: var(--ktms-primary);
   border-color: var(--ktms-primary-border);
   background: var(--ktms-primary-soft);
+  color: var(--ktms-primary);
 }
 
 .ktms-award-status-disapproved {
-  color: var(--ktms-danger);
   background: var(--ktms-danger-soft);
+  color: var(--ktms-danger);
 }
 
 .ktms-award-status-delivered {
-  color: var(--ktms-success);
   background: var(--ktms-success-soft);
+  color: var(--ktms-success);
 }
 
 .ktms-award-count {
