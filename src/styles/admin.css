@@ -6661,3 +6661,360 @@ a:hover {
 .ktms-message[data-status="failed"] {
   color: #FFC857;
 }
+
+/* =========================================================
+   MATCHDAYS
+   ========================================================= */
+
+.ktms-progression-matchdays {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+
+/* MATCHDAY PROGRESS SECTION */
+
+.ktms-progression-matchday-section {
+  overflow: hidden;
+
+  border: 1px solid var(--ktms-border);
+  border-radius: var(--ktms-radius-md);
+
+  background: var(--ktms-surface);
+
+  transition:
+    border-color 160ms ease,
+    background 160ms ease;
+}
+
+.ktms-progression-matchday-section:hover {
+  border-color: var(--ktms-border-strong);
+}
+
+.ktms-progression-matchday-section.is-collapsed {
+  background: var(--ktms-surface);
+}
+
+
+/* MATCHDAY SECTION TOGGLE */
+
+.ktms-progression-section-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+
+  width: 100%;
+  padding: 16px 18px;
+
+  border: 0;
+
+  background: transparent;
+  color: inherit;
+
+  text-align: left;
+
+  cursor: pointer;
+}
+
+.ktms-progression-section-toggle:hover {
+  background: var(--ktms-surface-hover);
+}
+
+.ktms-progression-section-toggle:focus-visible {
+  outline: 2px solid var(--ktms-primary);
+  outline-offset: -2px;
+}
+
+.ktms-progression-section-heading {
+  display: flex;
+  align-items: flex-start;
+
+  min-width: 0;
+}
+
+.ktms-progression-section-heading h3 {
+  margin: 0;
+
+  color: var(--ktms-text);
+
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.ktms-progression-section-heading p {
+  margin: 4px 0 0;
+
+  color: var(--ktms-text-muted);
+
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+
+/* SECTION CHEVRON */
+
+.ktms-progression-section-chevron {
+  flex: 0 0 auto;
+
+  color: var(--ktms-text-muted);
+
+  font-size: 22px;
+  line-height: 1;
+
+  transform: rotate(90deg);
+
+  transition:
+    transform 160ms ease,
+    color 160ms ease;
+}
+
+.ktms-progression-section-toggle:hover
+  .ktms-progression-section-chevron {
+  color: var(--ktms-primary);
+}
+
+.ktms-progression-matchday-section.is-collapsed
+  .ktms-progression-section-chevron {
+  transform: rotate(0deg);
+}
+
+
+/* SECTION CONTENT */
+
+.ktms-progression-section-content {
+  padding: 0 12px 12px;
+}
+
+
+/* INDIVIDUAL MATCHDAY */
+
+.ktms-progression-matchday {
+  overflow: hidden;
+
+  border: 1px solid var(--ktms-border);
+  border-radius: var(--ktms-radius-md);
+
+  background: var(--ktms-surface-raised);
+
+  transition:
+    border-color 160ms ease,
+    background 160ms ease;
+}
+
+.ktms-progression-matchday:hover {
+  border-color: var(--ktms-border-strong);
+}
+
+.ktms-progression-matchday.is-collapsed {
+  background: var(--ktms-surface);
+}
+
+
+/* MATCHDAY TOGGLE */
+
+.ktms-progression-matchday-toggle {
+  display: flex;
+  align-items: center;
+
+  width: 100%;
+  min-width: 0;
+
+  padding: 12px 14px;
+
+  border: 0;
+
+  background: transparent;
+  color: inherit;
+
+  text-align: left;
+
+  cursor: pointer;
+}
+
+.ktms-progression-matchday-toggle:hover {
+  background: var(--ktms-surface-hover);
+}
+
+.ktms-progression-matchday-toggle:focus-visible {
+  outline: 2px solid var(--ktms-primary);
+  outline-offset: -2px;
+}
+
+
+/* MATCHDAY NUMBER */
+
+.ktms-progression-matchday-number {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  flex: 0 0 auto;
+
+  width: 28px;
+  height: 28px;
+
+  margin-right: 12px;
+
+  border: 1px solid var(--ktms-primary-border);
+  border-radius: 50%;
+
+  background: var(--ktms-primary-soft);
+  color: var(--ktms-primary);
+
+  font-size: 11px;
+  font-weight: 800;
+}
+
+
+/* MATCHDAY MAIN CONTENT */
+
+.ktms-progression-matchday-main {
+  display: flex;
+  flex-direction: column;
+
+  min-width: 0;
+  flex: 1;
+}
+
+.ktms-progression-matchday-title-row {
+  display: flex;
+  align-items: center;
+
+  min-width: 0;
+
+  gap: 10px;
+}
+
+.ktms-progression-matchday-title-row strong {
+  min-width: 0;
+
+  overflow: hidden;
+
+  color: var(--ktms-text);
+
+  font-size: 13px;
+  font-weight: 700;
+
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ktms-progression-matchday-summary {
+  margin-top: 3px;
+
+  color: var(--ktms-text-muted);
+
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+
+/* MATCHDAY STATUS */
+
+.ktms-progression-matchday
+  .ktms-status {
+  flex: 0 0 auto;
+
+  min-height: 22px;
+  padding: 3px 7px;
+
+  font-size: 9px;
+}
+
+
+/* MATCHDAY CHEVRON */
+
+.ktms-progression-matchday-chevron {
+  flex: 0 0 auto;
+
+  margin-left: 12px;
+
+  color: var(--ktms-text-muted);
+
+  font-size: 20px;
+  line-height: 1;
+
+  transform: rotate(0deg);
+
+  transition:
+    transform 160ms ease,
+    color 160ms ease;
+}
+
+.ktms-progression-matchday-toggle:hover
+  .ktms-progression-matchday-chevron {
+  color: var(--ktms-primary);
+}
+
+.ktms-progression-matchday:not(.is-collapsed)
+  .ktms-progression-matchday-chevron {
+  transform: rotate(90deg);
+}
+
+
+/* MATCHDAY CONTENT */
+
+.ktms-progression-matchday-content {
+  padding: 0 14px 14px 54px;
+
+  border-top: 1px solid var(--ktms-border);
+}
+
+
+/* MATCHDAY META */
+
+.ktms-progression-matchday-meta {
+  display: flex;
+  flex-wrap: wrap;
+
+  gap: 14px;
+
+  padding-top: 12px;
+}
+
+.ktms-progression-matchday-meta span {
+  color: var(--ktms-text-muted);
+
+  font-size: 11px;
+}
+
+.ktms-progression-matchday-meta strong {
+  color: var(--ktms-text);
+
+  font-size: 12px;
+  font-weight: 700;
+}
+
+
+/* RESPONSIVE */
+
+@media (max-width: 640px) {
+  .ktms-progression-section-toggle {
+    padding: 14px;
+  }
+
+  .ktms-progression-section-content {
+    padding: 0 8px 8px;
+  }
+
+  .ktms-progression-matchday-toggle {
+    padding: 11px;
+  }
+
+  .ktms-progression-matchday-content {
+    padding: 0 11px 12px 51px;
+  }
+
+  .ktms-progression-matchday-title-row {
+    align-items: flex-start;
+    flex-direction: column;
+
+    gap: 4px;
+  }
+
+  .ktms-progression-matchday-summary {
+    font-size: 10px;
+  }
+}
