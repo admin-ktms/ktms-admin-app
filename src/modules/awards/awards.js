@@ -1,28 +1,43 @@
 import { adminApi } from "../../api/admin-api.js";
 
+/*
+ * KTMS AWARDS MODULE
+ *
+ * Frontend responsibility:
+ *   1. Send signal
+ *   2. Receive backend result
+ *   3. Display result
+ *
+ * Business rules, award evaluation, authorization,
+ * status validation and persistence remain backend-owned.
+ */
+
 const state = {
   tab: "awards",
   admin: null,
 
   awards: [],
-  rewards: [],
+  rewardDefinitions: [],
   tournaments: [],
 
-  filters: {
+  awardFilters: {
     tournamentId: "",
-    playerSearch: "",
+    registrationSearch: "",
     prizeStatus: "",
-    verificationMethod: "",
+    verificationMethod: ""
+  },
 
-    definitionStatus: "",
-    definitionTournamentType: "",
-    definitionCategory: "",
-    definitionType: "",
-    definitionVerification: ""
+  definitionFilters: {
+    status: "",
+    tournamentTypeId: "",
+    category: "",
+    rewardType: "",
+    verificationMethod: ""
   },
 
   editingReward: null
 };
+
 
 /* =========================================================
    MODULE ENTRY
@@ -30,6 +45,8 @@ const state = {
 
 export async function renderAwards(page, admin = null) {
   state.admin = admin;
+  state.tab = "awards";
+  state.editingReward = null;
 
   page.innerHTML = `
     <div class="ktms-module ktms-awards-module">
@@ -52,6 +69,7 @@ export async function renderAwards(page, admin = null) {
       <div id="awards-action-banner"></div>
 
       <div class="ktms-awards-tabs">
+
         <button
           type="button"
           class="ktms-award-tab active"
@@ -67,6 +85,7 @@ export async function renderAwards(page, admin = null) {
         >
           Reward Definitions
         </button>
+
       </div>
 
       <div id="awards-content">
@@ -80,31 +99,36 @@ export async function renderAwards(page, admin = null) {
     .getElementById("refresh-awards-button")
     ?.addEventListener("click", loadAll);
 
-  document.querySelectorAll("[data-award-tab]").forEach((button) => {
-    button.addEventListener("click", () => {
-      state.tab = button.dataset.awardTab;
+  document
+    .querySelectorAll("[data-award-tab]")
+    .forEach((button) => {
+      button.addEventListener("click", () => {
+        state.tab = button.dataset.awardTab;
 
-      document.querySelectorAll("[data-award-tab]").forEach((tab) => {
-        tab.classList.toggle(
-          "active",
-          tab.dataset.awardTab === state.tab
-        );
+        document
+          .querySelectorAll("[data-award-tab]")
+          .forEach((tab) => {
+            tab.classList.toggle(
+              "active",
+              tab.dataset.awardTab === state.tab
+            );
+          });
+
+        renderTab();
       });
-
-      renderTab();
     });
-  });
 
   await loadAll();
 }
 
 
 /* =========================================================
-   DATA LOADING
+   DATA SIGNALS
    ========================================================= */
 
 async function loadAll() {
-  const content = document.getElementById("awards-content");
+  const content =
+    document.getElementById("awards-content");
 
   if (!content) {
     return;
@@ -118,71 +142,58 @@ async function loadAll() {
 
   try {
     /*
-     * Do not call registration.list here.
+     * These are read signals only.
      *
-     * Awards must not depend on the registrations module merely
-     * to render the awards screen.
+     * The frontend does not calculate or create
+     * award records.
      */
+
     const [
       awardsResponse,
-      rewardsResponse,
+      definitionsResponse,
       tournamentsResponse
     ] = await Promise.all([
       adminApi("award.list", {
         tournamentId:
-          state.filters.tournamentId || null,
+          state.awardFilters.tournamentId || null,
 
         prizeStatus:
-          state.filters.prizeStatus || null,
+          state.awardFilters.prizeStatus || null,
 
         verificationMethod:
-          state.filters.verificationMethod || null
+          state.awardFilters.verificationMethod || null
       }),
 
       adminApi("reward_definitions.list", {}),
 
-      adminApi("tournament.list", {
-        status: null
-      })
+      adminApi("tournament.list", {})
     ]);
 
-    state.awards = extractArray(
-      awardsResponse,
-      [
-        "awards",
-        "items",
-        "data"
-      ]
-    );
+    state.awards =
+      toArray(awardsResponse);
 
-    state.rewards = extractArray(
-      rewardsResponse,
-      [
-        "rewardDefinitions",
-        "reward_definitions",
-        "items",
-        "data"
-      ]
-    );
+    state.rewardDefinitions =
+      toArray(definitionsResponse);
 
-    state.tournaments = extractArray(
-      tournamentsResponse,
-      [
-        "tournaments",
-        "items",
-        "data"
-      ]
-    );
+    state.tournaments =
+      toArray(tournamentsResponse);
 
     renderTab();
-    renderActionBanner();
+
+    setActionBanner("");
 
   } catch (error) {
-    console.error("KTMS Awards module error:", error);
+    console.error(
+      "KTMS Awards module error:",
+      error
+    );
 
     content.innerHTML = `
       <div class="ktms-error-card">
-        <strong>Unable to load awards.</strong>
+
+        <strong>
+          Unable to load awards.
+        </strong>
 
         <p>
           ${escapeHtml(
@@ -190,6 +201,7 @@ async function loadAll() {
             "An unexpected error occurred."
           )}
         </p>
+
       </div>
     `;
 
@@ -212,7 +224,7 @@ function renderTab() {
 
   if (state.tab === "definitions") {
     content.innerHTML =
-      renderRewardDefinitions();
+      renderRewardDefinitionsContent();
 
     bindDefinitionFilters();
     bindDefinitionOperations();
@@ -221,7 +233,7 @@ function renderTab() {
   }
 
   content.innerHTML =
-    renderAwards();
+    renderAwardsContent();
 
   bindAwardFilters();
   bindAwardOperations();
@@ -229,11 +241,11 @@ function renderTab() {
 
 
 /* =========================================================
-   AWARDS
+   AWARDS DISPLAY
    ========================================================= */
 
-function renderAwards() {
-  const filteredAwards =
+function renderAwardsContent() {
+  const awards =
     getFilteredAwards();
 
   const total =
@@ -281,6 +293,12 @@ function renderAwards() {
                 value="${escapeAttribute(
                   getTournamentId(tournament)
                 )}"
+                ${
+                  getTournamentId(tournament) ===
+                  state.awardFilters.tournamentId
+                    ? "selected"
+                    : ""
+                }
               >
                 ${escapeHtml(
                   getTournamentName(tournament)
@@ -288,15 +306,16 @@ function renderAwards() {
               </option>
             `)
             .join("")}
+
         </select>
 
         <input
-          id="award-player-filter"
+          id="award-registration-filter"
           class="ktms-filter"
           type="search"
-          placeholder="Search player..."
+          placeholder="Search registration / player..."
           value="${escapeAttribute(
-            state.filters.playerSearch
+            state.awardFilters.registrationSearch
           )}"
         />
 
@@ -308,21 +327,26 @@ function renderAwards() {
             All award statuses
           </option>
 
-          <option value="Pending">
-            Pending
-          </option>
+          ${statusOption(
+            "Pending",
+            state.awardFilters.prizeStatus
+          )}
 
-          <option value="Approved">
-            Approved
-          </option>
+          ${statusOption(
+            "Approved",
+            state.awardFilters.prizeStatus
+          )}
 
-          <option value="Disapproved">
-            Disapproved
-          </option>
+          ${statusOption(
+            "Disapproved",
+            state.awardFilters.prizeStatus
+          )}
 
-          <option value="Delivered">
-            Delivered
-          </option>
+          ${statusOption(
+            "Delivered",
+            state.awardFilters.prizeStatus
+          )}
+
         </select>
 
         <select
@@ -333,13 +357,16 @@ function renderAwards() {
             All verification
           </option>
 
-          <option value="Automatic">
-            Automatic
-          </option>
+          ${statusOption(
+            "Automatic",
+            state.awardFilters.verificationMethod
+          )}
 
-          <option value="Admin">
-            Admin
-          </option>
+          ${statusOption(
+            "Admin",
+            state.awardFilters.verificationMethod
+          )}
+
         </select>
 
         <button
@@ -385,23 +412,21 @@ function renderAwards() {
         ? `
           <div class="ktms-award-action-banner">
 
-            <div>
-              <strong>
-                ${adminPending}
-                admin-verified award
-                ${
-                  adminPending === 1
-                    ? "requires"
-                    : "require"
-                }
-                action.
-              </strong>
+            <strong>
+              ${adminPending}
+              admin-verified award
+              ${
+                adminPending === 1
+                  ? "requires"
+                  : "require"
+              }
+              action.
+            </strong>
 
-              <p>
-                Approval and delivery are handled
-                from the Award Operations section.
-              </p>
-            </div>
+            <p>
+              Use Award Operations below to
+              approve or disapprove pending awards.
+            </p>
 
           </div>
         `
@@ -409,21 +434,24 @@ function renderAwards() {
     }
 
 
-    <!-- =====================================================
-         AWARD TABLE
-         ===================================================== -->
-
     <div class="ktms-card">
 
       <div class="ktms-toolbar">
 
         <div>
-          <strong>Awards</strong>
+
+          <strong>
+            Awards
+          </strong>
 
           <div class="ktms-muted">
-            Showing ${filteredAwards.length}
-            of ${state.awards.length} awards.
+            Showing
+            ${awards.length}
+            of
+            ${state.awards.length}
+            awards.
           </div>
+
         </div>
 
       </div>
@@ -434,21 +462,23 @@ function renderAwards() {
         <table class="ktms-table">
 
           <thead>
+
             <tr>
-              <th>Player</th>
+              <th>Registration</th>
               <th>Award</th>
               <th>Reward</th>
               <th>Tournament</th>
               <th>Verification</th>
               <th>Status</th>
             </tr>
+
           </thead>
 
           <tbody>
 
             ${
-              filteredAwards.length
-                ? filteredAwards
+              awards.length
+                ? awards
                     .map(renderAwardRow)
                     .join("")
                 : `
@@ -472,10 +502,6 @@ function renderAwards() {
     </div>
 
 
-    <!-- =====================================================
-         AWARD OPERATIONS
-         ===================================================== -->
-
     <div
       class="ktms-card"
       style="margin-top:18px;"
@@ -484,19 +510,21 @@ function renderAwards() {
       <div class="ktms-toolbar">
 
         <div>
+
           <strong>
             Award Operations
           </strong>
 
           <div class="ktms-muted">
-            Approve admin-verified awards
-            and mark approved awards as sent.
+            Backend-authorized operations for
+            admin-verified awards.
           </div>
+
         </div>
 
       </div>
 
-      ${renderAwardOperations(filteredAwards)}
+      ${renderAwardOperations(awards)}
 
     </div>
   `;
@@ -504,37 +532,37 @@ function renderAwards() {
 
 
 /* =========================================================
-   AWARD TABLE ROW
+   AWARD ROW
    ========================================================= */
 
 function renderAwardRow(award) {
   const status =
     awardStatus(award);
 
-  const rewardDefinition =
+  const reward =
     findRewardDefinition(
       getAwardRewardDefinitionId(award)
     );
 
   const rewardName =
-    rewardDefinition?.reward_name ??
-    rewardDefinition?.rewardName ??
     award?.reward_name ??
     award?.rewardName ??
+    reward?.reward_name ??
+    reward?.rewardName ??
     "—";
 
   const rewardValue =
     award?.reward_value ??
     award?.rewardValue ??
-    rewardDefinition?.reward_value ??
-    rewardDefinition?.rewardValue ??
+    reward?.reward_value ??
+    reward?.rewardValue ??
     "—";
 
   const verification =
-    rewardDefinition?.verification_method ??
-    rewardDefinition?.verificationMethod ??
     award?.verification_method ??
     award?.verificationMethod ??
+    reward?.verification_method ??
+    reward?.verificationMethod ??
     "—";
 
   const tournamentId =
@@ -544,43 +572,53 @@ function renderAwardRow(award) {
     <tr>
 
       <td>
+
         <strong>
           ${escapeHtml(
-            getAwardPlayerName(award)
+            getAwardRegistrationId(award)
           )}
         </strong>
 
-        ${
-          getAwardPlayerId(award)
-            ? `
-              <div class="ktms-muted">
-                ${escapeHtml(
-                  getAwardPlayerId(award)
-                )}
-              </div>
-            `
-            : ""
-        }
       </td>
 
 
       <td>
+
         <strong>
           ${escapeHtml(
             getAwardId(award)
           )}
         </strong>
+
+        ${
+          award?.awarded_datetime
+            ? `
+              <div class="ktms-muted">
+                ${escapeHtml(
+                  formatDateTime(
+                    award.awarded_datetime
+                  )
+                )}
+              </div>
+            `
+            : ""
+        }
+
       </td>
 
 
       <td>
 
         <strong>
-          ${escapeHtml(rewardName)}
+          ${escapeHtml(
+            rewardName
+          )}
         </strong>
 
         <div class="ktms-muted">
-          ${escapeHtml(rewardValue)}
+          ${escapeHtml(
+            String(rewardValue)
+          )}
         </div>
 
       </td>
@@ -590,7 +628,9 @@ function renderAwardRow(award) {
 
         <strong>
           ${escapeHtml(
-            findTournamentName(tournamentId)
+            findTournamentName(
+              tournamentId
+            )
           )}
         </strong>
 
@@ -598,7 +638,9 @@ function renderAwardRow(award) {
           tournamentId
             ? `
               <div class="ktms-muted">
-                ${escapeHtml(tournamentId)}
+                ${escapeHtml(
+                  tournamentId
+                )}
               </div>
             `
             : ""
@@ -608,7 +650,9 @@ function renderAwardRow(award) {
 
 
       <td>
-        ${escapeHtml(verification)}
+        ${escapeHtml(
+          verification
+        )}
       </td>
 
 
@@ -633,7 +677,7 @@ function renderAwardRow(award) {
 
 
 /* =========================================================
-   AWARD OPERATIONS
+   AWARD OPERATIONS DISPLAY
    ========================================================= */
 
 function renderAwardOperations(awards) {
@@ -643,22 +687,12 @@ function renderAwardOperations(awards) {
       const status =
         awardStatus(award);
 
-      /*
-       * Only admin-verified Pending awards
-       * are eligible for approval/disapproval.
-       */
-
       if (
         status === "Pending" &&
         isPendingAdminAward(award)
       ) {
         return true;
       }
-
-      /*
-       * Approved awards can be marked
-       * as Delivered.
-       */
 
       if (status === "Approved") {
         return true;
@@ -684,7 +718,7 @@ function renderAwardOperations(awards) {
         <thead>
 
           <tr>
-            <th>Player</th>
+            <th>Registration</th>
             <th>Award</th>
             <th>Reward</th>
             <th>Status</th>
@@ -696,146 +730,7 @@ function renderAwardOperations(awards) {
         <tbody>
 
           ${operations
-            .map((award) => {
-
-              const status =
-                awardStatus(award);
-
-              const rewardDefinition =
-                findRewardDefinition(
-                  getAwardRewardDefinitionId(
-                    award
-                  )
-                );
-
-              const rewardName =
-                rewardDefinition?.reward_name ??
-                rewardDefinition?.rewardName ??
-                award?.reward_name ??
-                award?.rewardName ??
-                "—";
-
-              if (status === "Pending") {
-                return `
-                  <tr>
-
-                    <td>
-                      ${escapeHtml(
-                        getAwardPlayerName(
-                          award
-                        )
-                      )}
-                    </td>
-
-                    <td>
-                      ${escapeHtml(
-                        getAwardId(award)
-                      )}
-                    </td>
-
-                    <td>
-                      ${escapeHtml(
-                        rewardName
-                      )}
-                    </td>
-
-                    <td>
-                      <span
-                        class="
-                          ktms-award-status
-                          ktms-award-status-pending
-                        "
-                      >
-                        Pending
-                      </span>
-                    </td>
-
-                    <td>
-
-                      <div class="ktms-toolbar-left">
-
-                        <button
-                          class="ktms-primary-button"
-                          type="button"
-                          data-award-operation="approve"
-                          data-award-id="${escapeAttribute(
-                            getAwardId(award)
-                          )}"
-                        >
-                          APPROVE
-                        </button>
-
-                        <button
-                          class="ktms-secondary-button"
-                          type="button"
-                          data-award-operation="disapprove"
-                          data-award-id="${escapeAttribute(
-                            getAwardId(award)
-                          )}"
-                        >
-                          DISAPPROVE
-                        </button>
-
-                      </div>
-
-                    </td>
-
-                  </tr>
-                `;
-              }
-
-              return `
-                <tr>
-
-                  <td>
-                    ${escapeHtml(
-                      getAwardPlayerName(
-                        award
-                      )
-                    )}
-                  </td>
-
-                  <td>
-                    ${escapeHtml(
-                      getAwardId(award)
-                    )}
-                  </td>
-
-                  <td>
-                    ${escapeHtml(
-                      rewardName
-                    )}
-                  </td>
-
-                  <td>
-                    <span
-                      class="
-                        ktms-award-status
-                        ktms-award-status-approved
-                      "
-                    >
-                      Approved
-                    </span>
-                  </td>
-
-                  <td>
-
-                    <button
-                      class="ktms-primary-button"
-                      type="button"
-                      data-award-operation="deliver"
-                      data-award-id="${escapeAttribute(
-                        getAwardId(award)
-                      )}"
-                    >
-                      MARK AS SENT
-                    </button>
-
-                  </td>
-
-                </tr>
-              `;
-            })
+            .map(renderAwardOperationRow)
             .join("")}
 
         </tbody>
@@ -847,95 +742,142 @@ function renderAwardOperations(awards) {
 }
 
 
-/* =========================================================
-   AWARD OPERATION EVENTS
-   ========================================================= */
+function renderAwardOperationRow(award) {
+  const status =
+    awardStatus(award);
 
-function bindAwardOperations() {
-  document
-    .querySelectorAll("[data-award-operation]")
-    .forEach((button) => {
-
-      button.addEventListener(
-        "click",
-        async () => {
-
-          const awardId =
-            button.dataset.awardId;
-
-          const operation =
-            button.dataset.awardOperation;
-
-          if (!awardId || !operation) {
-            return;
-          }
-
-          let nextStatus = "";
-
-          if (operation === "approve") {
-            nextStatus = "Approved";
-          }
-
-          if (operation === "disapprove") {
-            nextStatus = "Disapproved";
-          }
-
-          if (operation === "deliver") {
-            nextStatus = "Delivered";
-          }
-
-          if (!nextStatus) {
-            return;
-          }
-
-          let message =
-            `${nextStatus} this award?`;
-
-          if (
-            nextStatus === "Delivered"
-          ) {
-            message =
-              "Mark this award as sent/delivered?";
-          }
-
-          if (!window.confirm(message)) {
-            return;
-          }
-
-          await updateAwardStatus(
-            awardId,
-            nextStatus
-          );
-        }
-      );
-    });
-}
-
-
-async function updateAwardStatus(
-  awardId,
-  prizeStatus
-) {
-  try {
-
-    await adminApi(
-      "award.status",
-      {
-        awardId,
-        prizeStatus
-      }
+  const reward =
+    findRewardDefinition(
+      getAwardRewardDefinitionId(award)
     );
 
-    await loadAll();
+  const rewardName =
+    award?.reward_name ??
+    award?.rewardName ??
+    reward?.reward_name ??
+    reward?.rewardName ??
+    "—";
 
-  } catch (error) {
+  if (status === "Pending") {
+    return `
+      <tr>
 
-    window.alert(
-      error?.message ||
-      "Unable to update award status."
-    );
+        <td>
+          ${escapeHtml(
+            getAwardRegistrationId(award)
+          )}
+        </td>
 
+        <td>
+          ${escapeHtml(
+            getAwardId(award)
+          )}
+        </td>
+
+        <td>
+          ${escapeHtml(
+            rewardName
+          )}
+        </td>
+
+        <td>
+          <span
+            class="
+              ktms-award-status
+              ktms-award-status-pending
+            "
+          >
+            Pending
+          </span>
+        </td>
+
+        <td>
+
+          <div class="ktms-toolbar-left">
+
+            <button
+              class="ktms-primary-button"
+              type="button"
+              data-award-operation="approve"
+              data-award-id="${escapeAttribute(
+                getAwardId(award)
+              )}"
+            >
+              APPROVE
+            </button>
+
+            <button
+              class="ktms-secondary-button"
+              type="button"
+              data-award-operation="disapprove"
+              data-award-id="${escapeAttribute(
+                getAwardId(award)
+              )}"
+            >
+              DISAPPROVE
+            </button>
+
+          </div>
+
+        </td>
+
+      </tr>
+    `;
   }
+
+  if (status === "Approved") {
+    return `
+      <tr>
+
+        <td>
+          ${escapeHtml(
+            getAwardRegistrationId(award)
+          )}
+        </td>
+
+        <td>
+          ${escapeHtml(
+            getAwardId(award)
+          )}
+        </td>
+
+        <td>
+          ${escapeHtml(
+            rewardName
+          )}
+        </td>
+
+        <td>
+          <span
+            class="
+              ktms-award-status
+              ktms-award-status-approved
+            "
+          >
+            Approved
+          </span>
+        </td>
+
+        <td>
+
+          <button
+            class="ktms-primary-button"
+            type="button"
+            data-award-operation="deliver"
+            data-award-id="${escapeAttribute(
+              getAwardId(award)
+            )}"
+          >
+            MARK AS SENT
+          </button>
+
+        </td>
+
+      </tr>
+    `;
+  }
+
+  return "";
 }
 
 
@@ -949,9 +891,9 @@ function bindAwardFilters() {
       "award-tournament-filter"
     );
 
-  const player =
+  const registration =
     document.getElementById(
-      "award-player-filter"
+      "award-registration-filter"
     );
 
   const status =
@@ -964,149 +906,166 @@ function bindAwardFilters() {
       "award-verification-filter"
     );
 
-
-  if (tournament) {
-
-    tournament.value =
-      state.filters.tournamentId;
-
-    tournament.addEventListener(
-      "change",
-      async (event) => {
-
-        state.filters.tournamentId =
-          event.target.value;
-
-        await loadAll();
-      }
-    );
-  }
-
-
-  if (player) {
-
-    player.addEventListener(
-      "input",
-      (event) => {
-
-        state.filters.playerSearch =
-          event.target.value;
-
-        renderTab();
-      }
-    );
-
-    player.focus();
-
-    /*
-     * Keep the cursor at the end when the
-     * table is re-rendered during searching.
-     */
-    try {
-      player.setSelectionRange(
-        player.value.length,
-        player.value.length
-      );
-    } catch (_) {}
-  }
-
-
-  if (status) {
-
-    status.value =
-      state.filters.prizeStatus;
-
-    status.addEventListener(
-      "change",
-      async (event) => {
-
-        state.filters.prizeStatus =
-          event.target.value;
-
-        await loadAll();
-      }
-    );
-  }
-
-
-  if (verification) {
-
-    verification.value =
-      state.filters.verificationMethod;
-
-    verification.addEventListener(
-      "change",
-      async (event) => {
-
-        state.filters.verificationMethod =
-          event.target.value;
-
-        await loadAll();
-      }
-    );
-  }
-
-
-  document
-    .getElementById(
+  const clear =
+    document.getElementById(
       "clear-award-filters"
-    )
-    ?.addEventListener(
-      "click",
-      async () => {
-
-        state.filters.tournamentId =
-          "";
-
-        state.filters.playerSearch =
-          "";
-
-        state.filters.prizeStatus =
-          "";
-
-        state.filters.verificationMethod =
-          "";
-
-        await loadAll();
-      }
     );
+
+  tournament?.addEventListener(
+    "change",
+    async () => {
+      state.awardFilters.tournamentId =
+        tournament.value;
+
+      await loadAll();
+    }
+  );
+
+  registration?.addEventListener(
+    "input",
+    () => {
+      state.awardFilters.registrationSearch =
+        registration.value;
+
+      renderTab();
+    }
+  );
+
+  status?.addEventListener(
+    "change",
+    async () => {
+      state.awardFilters.prizeStatus =
+        status.value;
+
+      await loadAll();
+    }
+  );
+
+  verification?.addEventListener(
+    "change",
+    async () => {
+      state.awardFilters.verificationMethod =
+        verification.value;
+
+      await loadAll();
+    }
+  );
+
+  clear?.addEventListener(
+    "click",
+    async () => {
+      state.awardFilters = {
+        tournamentId: "",
+        registrationSearch: "",
+        prizeStatus: "",
+        verificationMethod: ""
+      };
+
+      await loadAll();
+    }
+  );
 }
 
 
 /* =========================================================
-   AWARD FILTERING
+   AWARD OPERATIONS SIGNALS
    ========================================================= */
 
-function getFilteredAwards() {
-  const search =
-    state.filters.playerSearch
-      .trim()
-      .toLowerCase();
+function bindAwardOperations() {
+  document
+    .querySelectorAll(
+      "[data-award-operation]"
+    )
+    .forEach((button) => {
 
-  return state.awards.filter(
-    (award) => {
+      button.addEventListener(
+        "click",
+        async () => {
 
-      if (search) {
+          const operation =
+            button.dataset.awardOperation;
 
-        const values = [
-          getAwardPlayerName(award),
-          getAwardPlayerId(award),
-          award?.registration_id,
-          award?.registrationId,
-          getAwardId(award)
-        ]
-          .filter(Boolean)
-          .join(" ")
-          .toLowerCase();
+          const awardId =
+            button.dataset.awardId;
 
-        if (!values.includes(search)) {
-          return false;
+          if (!awardId) {
+            return;
+          }
+
+          let prizeStatus = "";
+
+          if (operation === "approve") {
+            prizeStatus = "Approved";
+          }
+
+          if (operation === "disapprove") {
+            prizeStatus = "Disapproved";
+          }
+
+          if (operation === "deliver") {
+            prizeStatus = "Delivered";
+          }
+
+          if (!prizeStatus) {
+            return;
+          }
+
+          await updateAwardStatus(
+            awardId,
+            prizeStatus
+          );
         }
-      }
+      );
 
-      return true;
-    }
+    });
+}
+
+
+async function updateAwardStatus(
+  awardId,
+  prizeStatus
+) {
+  setActionBanner(
+    "Processing award operation..."
   );
+
+  try {
+    /*
+     * One command signal.
+     *
+     * Backend owns:
+     * - authorization
+     * - valid status transition
+     * - persistence
+     * - audit handling
+     */
+
+    await adminApi(
+      "award.status",
+      {
+        awardId,
+        prizeStatus
+      }
+    );
+
+    setActionBanner(
+      "Award operation completed."
+    );
+
+    await loadAll();
+
+  } catch (error) {
+    console.error(
+      "KTMS award status operation failed:",
+      error
+    );
+
+    setActionBanner(
+      error?.message ||
+      "Award operation failed.",
+      true
+    );
+  }
 }
 
 
@@ -1114,275 +1073,14 @@ function getFilteredAwards() {
    REWARD DEFINITIONS
    ========================================================= */
 
-function renderRewardDefinitions() {
-  const filtered =
+function renderRewardDefinitionsContent() {
+  const definitions =
     getFilteredRewardDefinitions();
 
-  const canManage =
+  const canManageDefinitions =
     isGameMaster();
 
-  const canChangeStatus =
-    canManage ||
-    isModerator();
-
   return `
-
-    ${
-      canManage
-        ? `
-          <div
-            class="ktms-card"
-            style="margin-bottom:18px;"
-          >
-
-            <div class="ktms-toolbar">
-
-              <div>
-                <strong>
-                  ${
-                    state.editingReward
-                      ? "Update Reward Definition"
-                      : "Create Reward Definition"
-                  }
-                </strong>
-
-                <div class="ktms-muted">
-                  Game Master reward definition
-                  operations.
-                </div>
-              </div>
-
-              ${
-                state.editingReward
-                  ? `
-                    <button
-                      id="cancel-reward-edit"
-                      class="ktms-secondary-button"
-                      type="button"
-                    >
-                      CANCEL EDIT
-                    </button>
-                  `
-                  : ""
-              }
-
-            </div>
-
-
-            <form id="reward-definition-form">
-
-              <div
-                class="ktms-toolbar-left"
-                style="flex-wrap:wrap;"
-              >
-
-                <input
-                  id="reward-definition-id"
-                  class="ktms-filter"
-                  placeholder="Reward definition ID"
-                  value="${escapeAttribute(
-                    state.editingReward
-                      ? definitionField(
-                          state.editingReward,
-                          "reward_definition_id",
-                          "rewardDefinitionId"
-                        )
-                      : ""
-                  )}"
-                  ${
-                    state.editingReward
-                      ? "readonly"
-                      : ""
-                  }
-                  required
-                />
-
-
-                <input
-                  id="reward-name"
-                  class="ktms-filter"
-                  placeholder="Reward name"
-                  value="${escapeAttribute(
-                    state.editingReward
-                      ? definitionField(
-                          state.editingReward,
-                          "reward_name",
-                          "rewardName"
-                        )
-                      : ""
-                  )}"
-                  required
-                />
-
-
-                <input
-                  id="reward-category"
-                  class="ktms-filter"
-                  placeholder="Category"
-                  value="${escapeAttribute(
-                    state.editingReward
-                      ? definitionField(
-                          state.editingReward,
-                          "reward_category",
-                          "rewardCategory"
-                        )
-                      : ""
-                  )}"
-                  required
-                />
-
-
-                <input
-                  id="reward-type"
-                  class="ktms-filter"
-                  placeholder="Reward type"
-                  value="${escapeAttribute(
-                    state.editingReward
-                      ? definitionField(
-                          state.editingReward,
-                          "reward_type",
-                          "rewardType"
-                        )
-                      : ""
-                  )}"
-                  required
-                />
-
-
-                <input
-                  id="reward-value"
-                  class="ktms-filter"
-                  placeholder="Reward value"
-                  value="${escapeAttribute(
-                    state.editingReward
-                      ? definitionField(
-                          state.editingReward,
-                          "reward_value",
-                          "rewardValue"
-                        )
-                      : ""
-                  )}"
-                  required
-                />
-
-
-                <select
-                  id="reward-verification"
-                  class="ktms-filter"
-                >
-
-                  <option
-                    value="Automatic"
-                    ${
-                      state.editingReward &&
-                      definitionField(
-                        state.editingReward,
-                        "verification_method",
-                        "verificationMethod"
-                      ) === "Automatic"
-                        ? "selected"
-                        : ""
-                    }
-                  >
-                    Automatic
-                  </option>
-
-                  <option
-                    value="Admin"
-                    ${
-                      state.editingReward &&
-                      definitionField(
-                        state.editingReward,
-                        "verification_method",
-                        "verificationMethod"
-                      ) === "Admin"
-                        ? "selected"
-                        : ""
-                    }
-                  >
-                    Admin
-                  </option>
-
-                </select>
-
-
-                <select
-                  id="reward-tournament-type"
-                  class="ktms-filter"
-                >
-
-                  ${[
-                    "KT",
-                    "KC",
-                    "KS",
-                    "KW",
-                    "ALL"
-                  ]
-                    .map((type) => {
-
-                      const selected =
-                        state.editingReward
-                          ? definitionField(
-                              state.editingReward,
-                              "tournament_type_id",
-                              "tournamentTypeId"
-                            )
-                          : "KT";
-
-                      return `
-                        <option
-                          value="${type}"
-                          ${
-                            type === selected
-                              ? "selected"
-                              : ""
-                          }
-                        >
-                          ${type}
-                        </option>
-                      `;
-                    })
-                    .join("")}
-
-                </select>
-
-              </div>
-
-
-              <div style="margin-top:12px;">
-
-                <button
-                  class="ktms-primary-button"
-                  type="submit"
-                >
-                  ${
-                    state.editingReward
-                      ? "UPDATE REWARD"
-                      : "CREATE REWARD"
-                  }
-                </button>
-
-              </div>
-
-
-              <div
-                id="reward-definition-message"
-                class="ktms-muted"
-                style="margin-top:8px;"
-              ></div>
-
-            </form>
-
-          </div>
-        `
-        : ""
-    }
-
-
-    <!-- =====================================================
-         REWARD DEFINITION FILTERS
-         ===================================================== -->
-
     <div class="ktms-toolbar">
 
       <div class="ktms-toolbar-left">
@@ -1391,46 +1089,55 @@ function renderRewardDefinitions() {
           id="definition-status-filter"
           class="ktms-filter"
         >
-
           <option value="">
             All statuses
           </option>
 
-          <option value="Active">
-            Active
-          </option>
+          ${statusOption(
+            "Active",
+            state.definitionFilters.status
+          )}
 
-          <option value="Disabled">
-            Disabled
-          </option>
+          ${statusOption(
+            "Disabled",
+            state.definitionFilters.status
+          )}
 
         </select>
 
 
         <select
-          id="definition-type-filter"
+          id="definition-tournament-type-filter"
           class="ktms-filter"
         >
-
           <option value="">
             All tournament types
           </option>
 
-          ${[
+          ${typeOption(
             "KT",
+            state.definitionFilters.tournamentTypeId
+          )}
+
+          ${typeOption(
             "KC",
+            state.definitionFilters.tournamentTypeId
+          )}
+
+          ${typeOption(
             "KS",
+            state.definitionFilters.tournamentTypeId
+          )}
+
+          ${typeOption(
             "KW",
-            "ALL"
-          ]
-            .map(
-              (type) => `
-                <option value="${type}">
-                  ${type}
-                </option>
-              `
-            )
-            .join("")}
+            state.definitionFilters.tournamentTypeId
+          )}
+
+          ${typeOption(
+            "ALL",
+            state.definitionFilters.tournamentTypeId
+          )}
 
         </select>
 
@@ -1441,38 +1148,87 @@ function renderRewardDefinitions() {
           type="search"
           placeholder="Category..."
           value="${escapeAttribute(
-            state.filters.definitionCategory
+            state.definitionFilters.category
           )}"
         />
 
 
-        <input
-          id="definition-reward-type-filter"
+        <select
+          id="definition-type-filter"
           class="ktms-filter"
-          type="search"
-          placeholder="Reward type..."
-          value="${escapeAttribute(
-            state.filters.definitionType
-          )}"
-        />
+        >
+          <option value="">
+            All reward types
+          </option>
+
+          <option
+            value="Cash"
+            ${
+              state.definitionFilters.rewardType ===
+              "Cash"
+                ? "selected"
+                : ""
+            }
+          >
+            Cash
+          </option>
+
+          <option
+            value="Coupon"
+            ${
+              state.definitionFilters.rewardType ===
+              "Coupon"
+                ? "selected"
+                : ""
+            }
+          >
+            Coupon
+          </option>
+
+          <option
+            value="Physical"
+            ${
+              state.definitionFilters.rewardType ===
+              "Physical"
+                ? "selected"
+                : ""
+            }
+          >
+            Physical
+          </option>
+
+          <option
+            value="Other"
+            ${
+              state.definitionFilters.rewardType ===
+              "Other"
+                ? "selected"
+                : ""
+            }
+          >
+            Other
+          </option>
+
+        </select>
 
 
         <select
           id="definition-verification-filter"
           class="ktms-filter"
         >
-
           <option value="">
             All verification
           </option>
 
-          <option value="Automatic">
-            Automatic
-          </option>
+          ${statusOption(
+            "Automatic",
+            state.definitionFilters.verificationMethod
+          )}
 
-          <option value="Admin">
-            Admin
-          </option>
+          ${statusOption(
+            "Admin",
+            state.definitionFilters.verificationMethod
+          )}
 
         </select>
 
@@ -1490,27 +1246,49 @@ function renderRewardDefinitions() {
     </div>
 
 
-    <!-- =====================================================
-         REWARD DEFINITION TABLE
-         ===================================================== -->
-
     <div class="ktms-card">
 
       <div class="ktms-toolbar">
 
         <div>
+
           <strong>
             Reward Definitions
           </strong>
 
           <div class="ktms-muted">
-            Showing ${filtered.length}
-            of ${state.rewards.length}
+            Showing
+            ${definitions.length}
+            of
+            ${state.rewardDefinitions.length}
             reward definitions.
           </div>
+
         </div>
 
+        ${
+          canManageDefinitions
+            ? `
+              <button
+                id="create-reward-definition"
+                class="ktms-primary-button"
+                type="button"
+              >
+                CREATE REWARD
+              </button>
+            `
+            : ""
+        }
+
       </div>
+
+
+      ${
+        canManageDefinitions &&
+        state.editingReward
+          ? renderRewardEditor()
+          : ""
+      }
 
 
       <div class="ktms-table-wrap">
@@ -1520,31 +1298,25 @@ function renderRewardDefinitions() {
           <thead>
 
             <tr>
-              <th>Reward</th>
+              <th>Name</th>
               <th>Category</th>
               <th>Type</th>
               <th>Value</th>
               <th>Verification</th>
-              <th>Applies To</th>
+              <th>Tournament Type</th>
               <th>Status</th>
-              <th>Operations</th>
+              <th>Operation</th>
             </tr>
 
           </thead>
 
-
           <tbody>
 
             ${
-              filtered.length
-                ? filtered
+              definitions.length
+                ? definitions
                     .map(
-                      (reward) =>
-                        renderRewardDefinitionRow(
-                          reward,
-                          canManage,
-                          canChangeStatus
-                        )
+                      renderRewardDefinitionRow
                     )
                     .join("")
                 : `
@@ -1570,70 +1342,21 @@ function renderRewardDefinitions() {
 }
 
 
-/* =========================================================
-   REWARD DEFINITION ROW
-   ========================================================= */
-
 function renderRewardDefinitionRow(
-  reward,
-  canManage,
-  canChangeStatus
+  definition
 ) {
   const id =
-    definitionField(
-      reward,
-      "reward_definition_id",
-      "rewardDefinitionId"
+    getRewardDefinitionId(
+      definition
     );
 
-  const name =
-    definitionField(
-      reward,
-      "reward_name",
-      "rewardName"
-    ) || id;
-
-  const category =
-    definitionField(
-      reward,
-      "reward_category",
-      "rewardCategory"
-    ) || "—";
-
-  const type =
-    definitionField(
-      reward,
-      "reward_type",
-      "rewardType"
-    ) || "—";
-
-  const value =
-    definitionField(
-      reward,
-      "reward_value",
-      "rewardValue"
-    ) || "—";
-
-  const verification =
-    definitionField(
-      reward,
-      "verification_method",
-      "verificationMethod"
-    ) || "—";
-
-  const tournamentType =
-    definitionField(
-      reward,
-      "tournament_type_id",
-      "tournamentTypeId"
-    ) || "—";
-
   const status =
-    definitionField(
-      reward,
-      "reward_status",
-      "rewardStatus"
-    ) || "Active";
+    getRewardDefinitionStatus(
+      definition
+    );
+
+  const canManage =
+    isGameMaster();
 
   return `
     <tr>
@@ -1641,7 +1364,11 @@ function renderRewardDefinitionRow(
       <td>
 
         <strong>
-          ${escapeHtml(name)}
+          ${escapeHtml(
+            getRewardDefinitionName(
+              definition
+            )
+          )}
         </strong>
 
         <div class="ktms-muted">
@@ -1651,23 +1378,45 @@ function renderRewardDefinitionRow(
       </td>
 
       <td>
-        ${escapeHtml(category)}
+        ${escapeHtml(
+          definition?.reward_category ??
+          definition?.rewardCategory ??
+          "—"
+        )}
       </td>
 
       <td>
-        ${escapeHtml(type)}
+        ${escapeHtml(
+          definition?.reward_type ??
+          definition?.rewardType ??
+          "—"
+        )}
       </td>
 
       <td>
-        ${escapeHtml(value)}
+        ${escapeHtml(
+          String(
+            definition?.reward_value ??
+            definition?.rewardValue ??
+            "—"
+          )
+        )}
       </td>
 
       <td>
-        ${escapeHtml(verification)}
+        ${escapeHtml(
+          definition?.verification_method ??
+          definition?.verificationMethod ??
+          "—"
+        )}
       </td>
 
       <td>
-        ${escapeHtml(tournamentType)}
+        ${escapeHtml(
+          definition?.tournament_type_id ??
+          definition?.tournamentTypeId ??
+          "—"
+        )}
       </td>
 
       <td>
@@ -1676,7 +1425,7 @@ function renderRewardDefinitionRow(
           class="
             ktms-award-status
             ktms-award-status-${escapeAttribute(
-              status.toLowerCase()
+              String(status).toLowerCase()
             )}
           "
         >
@@ -1695,10 +1444,8 @@ function renderRewardDefinitionRow(
                 <button
                   class="ktms-secondary-button"
                   type="button"
-                  data-definition-action="edit"
-                  data-definition-id="${escapeAttribute(
-                    id
-                  )}"
+                  data-definition-operation="edit"
+                  data-definition-id="${escapeAttribute(id)}"
                 >
                   EDIT
                 </button>
@@ -1706,22 +1453,15 @@ function renderRewardDefinitionRow(
               : ""
           }
 
-
           ${
-            canChangeStatus
+            canManage
               ? `
                 <button
                   class="ktms-secondary-button"
                   type="button"
-                  data-definition-action="status"
-                  data-definition-id="${escapeAttribute(
-                    id
-                  )}"
-                  data-definition-status="${
-                    status === "Active"
-                      ? "Disabled"
-                      : "Active"
-                  }"
+                  data-definition-operation="toggle"
+                  data-definition-id="${escapeAttribute(id)}"
+                  data-definition-status="${escapeAttribute(status)}"
                 >
                   ${
                     status === "Active"
@@ -1743,6 +1483,227 @@ function renderRewardDefinitionRow(
 
 
 /* =========================================================
+   REWARD DEFINITION EDITOR
+   ========================================================= */
+
+function renderRewardEditor() {
+  const reward =
+    state.editingReward;
+
+  const editing =
+    Boolean(reward);
+
+  return `
+    <div
+      class="ktms-card"
+      style="margin-bottom:18px;"
+    >
+
+      <div class="ktms-toolbar">
+
+        <div>
+          <strong>
+            ${
+              editing
+                ? "Update Reward Definition"
+                : "Create Reward Definition"
+            }
+          </strong>
+
+          <div class="ktms-muted">
+            The backend remains authoritative for
+            validation and authorization.
+          </div>
+        </div>
+
+      </div>
+
+
+      <div class="ktms-toolbar">
+
+        <input
+          id="reward-definition-id"
+          class="ktms-filter"
+          type="text"
+          placeholder="Reward definition ID"
+          value="${escapeAttribute(
+            reward?.reward_definition_id ??
+            reward?.rewardDefinitionId ??
+            ""
+          )}"
+          ${editing ? "readonly" : ""}
+        />
+
+        <input
+          id="reward-name"
+          class="ktms-filter"
+          type="text"
+          placeholder="Reward name"
+          value="${escapeAttribute(
+            reward?.reward_name ??
+            reward?.rewardName ??
+            ""
+          )}"
+        />
+
+        <input
+          id="reward-category"
+          class="ktms-filter"
+          type="text"
+          placeholder="Reward category"
+          value="${escapeAttribute(
+            reward?.reward_category ??
+            reward?.rewardCategory ??
+            ""
+          )}"
+        />
+
+        <select
+          id="reward-type"
+          class="ktms-filter"
+        >
+
+          <option value="">
+            Reward type
+          </option>
+
+          ${editorOption(
+            "Cash",
+            reward?.reward_type ??
+            reward?.rewardType
+          )}
+
+          ${editorOption(
+            "Coupon",
+            reward?.reward_type ??
+            reward?.rewardType
+          )}
+
+          ${editorOption(
+            "Physical",
+            reward?.reward_type ??
+            reward?.rewardType
+          )}
+
+          ${editorOption(
+            "Other",
+            reward?.reward_type ??
+            reward?.rewardType
+          )}
+
+        </select>
+
+
+        <input
+          id="reward-value"
+          class="ktms-filter"
+          type="text"
+          placeholder="Reward value"
+          value="${escapeAttribute(
+            reward?.reward_value ??
+            reward?.rewardValue ??
+            ""
+          )}"
+        />
+
+        <select
+          id="reward-verification"
+          class="ktms-filter"
+        >
+
+          <option value="">
+            Verification method
+          </option>
+
+          ${editorOption(
+            "Automatic",
+            reward?.verification_method ??
+            reward?.verificationMethod
+          )}
+
+          ${editorOption(
+            "Admin",
+            reward?.verification_method ??
+            reward?.verificationMethod
+          )}
+
+        </select>
+
+
+        <select
+          id="reward-tournament-type"
+          class="ktms-filter"
+        >
+
+          <option value="">
+            Tournament type
+          </option>
+
+          ${editorOption(
+            "KT",
+            reward?.tournament_type_id ??
+            reward?.tournamentTypeId
+          )}
+
+          ${editorOption(
+            "KC",
+            reward?.tournament_type_id ??
+            reward?.tournamentTypeId
+          )}
+
+          ${editorOption(
+            "KS",
+            reward?.tournament_type_id ??
+            reward?.tournamentTypeId
+          )}
+
+          ${editorOption(
+            "KW",
+            reward?.tournament_type_id ??
+            reward?.tournamentTypeId
+          )}
+
+          ${editorOption(
+            "ALL",
+            reward?.tournament_type_id ??
+            reward?.tournamentTypeId
+          )}
+
+        </select>
+
+      </div>
+
+
+      <div class="ktms-toolbar-left">
+
+        <button
+          id="save-reward-definition"
+          class="ktms-primary-button"
+          type="button"
+        >
+          ${
+            editing
+              ? "UPDATE REWARD"
+              : "CREATE REWARD"
+          }
+        </button>
+
+        <button
+          id="cancel-reward-definition"
+          class="ktms-secondary-button"
+          type="button"
+        >
+          CANCEL
+        </button>
+
+      </div>
+
+    </div>
+  `;
+}
+
+
+/* =========================================================
    REWARD DEFINITION FILTERS
    ========================================================= */
 
@@ -1754,7 +1715,7 @@ function bindDefinitionFilters() {
 
   const tournamentType =
     document.getElementById(
-      "definition-type-filter"
+      "definition-tournament-type-filter"
     );
 
   const category =
@@ -1764,7 +1725,7 @@ function bindDefinitionFilters() {
 
   const rewardType =
     document.getElementById(
-      "definition-reward-type-filter"
+      "definition-type-filter"
     );
 
   const verification =
@@ -1772,119 +1733,75 @@ function bindDefinitionFilters() {
       "definition-verification-filter"
     );
 
-
-  if (status) {
-
-    status.value =
-      state.filters.definitionStatus;
-
-    status.addEventListener(
-      "change",
-      (event) => {
-
-        state.filters.definitionStatus =
-          event.target.value;
-
-        renderTab();
-      }
-    );
-  }
-
-
-  if (tournamentType) {
-
-    tournamentType.value =
-      state.filters.definitionTournamentType;
-
-    tournamentType.addEventListener(
-      "change",
-      (event) => {
-
-        state.filters.definitionTournamentType =
-          event.target.value;
-
-        renderTab();
-      }
-    );
-  }
-
-
-  if (category) {
-
-    category.addEventListener(
-      "input",
-      (event) => {
-
-        state.filters.definitionCategory =
-          event.target.value;
-
-        renderTab();
-      }
-    );
-
-  }
-
-
-  if (rewardType) {
-
-    rewardType.addEventListener(
-      "input",
-      (event) => {
-
-        state.filters.definitionType =
-          event.target.value;
-
-        renderTab();
-      }
-    );
-
-  }
-
-
-  if (verification) {
-
-    verification.value =
-      state.filters.definitionVerification;
-
-    verification.addEventListener(
-      "change",
-      (event) => {
-
-        state.filters.definitionVerification =
-          event.target.value;
-
-        renderTab();
-      }
-    );
-  }
-
-
-  document
-    .getElementById(
+  const clear =
+    document.getElementById(
       "clear-definition-filters"
-    )
-    ?.addEventListener(
-      "click",
-      () => {
-
-        state.filters.definitionStatus =
-          "";
-
-        state.filters.definitionTournamentType =
-          "";
-
-        state.filters.definitionCategory =
-          "";
-
-        state.filters.definitionType =
-          "";
-
-        state.filters.definitionVerification =
-          "";
-
-        renderTab();
-      }
     );
+
+  status?.addEventListener(
+    "change",
+    () => {
+      state.definitionFilters.status =
+        status.value;
+
+      renderTab();
+    }
+  );
+
+  tournamentType?.addEventListener(
+    "change",
+    () => {
+      state.definitionFilters.tournamentTypeId =
+        tournamentType.value;
+
+      renderTab();
+    }
+  );
+
+  category?.addEventListener(
+    "input",
+    () => {
+      state.definitionFilters.category =
+        category.value;
+
+      renderTab();
+    }
+  );
+
+  rewardType?.addEventListener(
+    "change",
+    () => {
+      state.definitionFilters.rewardType =
+        rewardType.value;
+
+      renderTab();
+    }
+  );
+
+  verification?.addEventListener(
+    "change",
+    () => {
+      state.definitionFilters.verificationMethod =
+        verification.value;
+
+      renderTab();
+    }
+  );
+
+  clear?.addEventListener(
+    "click",
+    () => {
+      state.definitionFilters = {
+        status: "",
+        tournamentTypeId: "",
+        category: "",
+        rewardType: "",
+        verificationMethod: ""
+      };
+
+      renderTab();
+    }
+  );
 }
 
 
@@ -1895,27 +1812,80 @@ function bindDefinitionFilters() {
 function bindDefinitionOperations() {
   document
     .getElementById(
-      "reward-definition-form"
+      "create-reward-definition"
     )
     ?.addEventListener(
-      "submit",
-      async (event) => {
+      "click",
+      () => {
+        state.editingReward = {};
 
-        event.preventDefault();
+        renderTab();
 
-        await saveRewardDefinition();
+        document
+          .getElementById(
+            "reward-definition-id"
+          )
+          ?.focus();
       }
     );
 
 
   document
+    .querySelectorAll(
+      "[data-definition-operation]"
+    )
+    .forEach((button) => {
+
+      button.addEventListener(
+        "click",
+        async () => {
+
+          const operation =
+            button.dataset.definitionOperation;
+
+          const id =
+            button.dataset.definitionId;
+
+          const definition =
+            state.rewardDefinitions.find(
+              (item) =>
+                getRewardDefinitionId(
+                  item
+                ) === id
+            );
+
+          if (!definition) {
+            return;
+          }
+
+          if (operation === "edit") {
+            state.editingReward =
+              definition;
+
+            renderTab();
+
+            return;
+          }
+
+          if (operation === "toggle") {
+            await toggleRewardDefinition(
+              definition
+            );
+          }
+
+        }
+      );
+
+    });
+
+
+  document
     .getElementById(
-      "cancel-reward-edit"
+      "cancel-reward-definition"
     )
     ?.addEventListener(
       "click",
       () => {
-
         state.editingReward = null;
 
         renderTab();
@@ -1924,103 +1894,45 @@ function bindDefinitionOperations() {
 
 
   document
-    .querySelectorAll(
-      "[data-definition-action]"
+    .getElementById(
+      "save-reward-definition"
     )
-    .forEach((button) => {
-
-      button.addEventListener(
-        "click",
-        async () => {
-
-          const action =
-            button.dataset.definitionAction;
-
-          const id =
-            button.dataset.definitionId;
-
-          if (!id) {
-            return;
-          }
-
-
-          if (action === "edit") {
-
-            state.editingReward =
-              state.rewards.find(
-                (reward) =>
-                  definitionField(
-                    reward,
-                    "reward_definition_id",
-                    "rewardDefinitionId"
-                  ) === id
-              ) || null;
-
-            renderTab();
-
-            return;
-          }
-
-
-          if (action === "status") {
-
-            await changeRewardDefinitionStatus(
-              id,
-              button.dataset.definitionStatus
-            );
-
-          }
-        }
-      );
-    });
+    ?.addEventListener(
+      "click",
+      saveRewardDefinition
+    );
 }
 
 
 /* =========================================================
-   CREATE / UPDATE REWARD DEFINITION
+   REWARD DEFINITION COMMAND SIGNALS
    ========================================================= */
 
 async function saveRewardDefinition() {
   const rewardDefinitionId =
-    getInputValue(
+    valueOf(
       "reward-definition-id"
     );
 
   const rewardName =
-    getInputValue(
-      "reward-name"
-    );
+    valueOf("reward-name");
 
   const rewardCategory =
-    getInputValue(
-      "reward-category"
-    );
+    valueOf("reward-category");
 
   const rewardType =
-    getInputValue(
-      "reward-type"
-    );
+    valueOf("reward-type");
 
   const rewardValue =
-    getInputValue(
-      "reward-value"
-    );
+    valueOf("reward-value");
 
   const verificationMethod =
-    getInputValue(
-      "reward-verification"
-    ) || null;
+    valueOf("reward-verification");
 
   const tournamentTypeId =
-    getInputValue(
+    valueOf(
       "reward-tournament-type"
     );
-
-  const message =
-    document.getElementById(
-      "reward-definition-message"
-    );
-
 
   if (
     !rewardDefinitionId ||
@@ -2030,37 +1942,37 @@ async function saveRewardDefinition() {
     !rewardValue ||
     !tournamentTypeId
   ) {
-
-    setMessage(
-      message,
-      "All reward definition fields are required."
+    setActionBanner(
+      "Complete all required reward fields.",
+      true
     );
 
     return;
   }
 
-
-  const reason =
-    window.prompt(
-      state.editingReward
-        ? "Reason for updating this reward definition:"
-        : "Reason for creating this reward definition:"
+  const isUpdate =
+    Boolean(
+      state.editingReward &&
+      (
+        state.editingReward
+          .reward_definition_id ||
+        state.editingReward
+          .rewardDefinitionId
+      )
     );
 
+  const action =
+    isUpdate
+      ? "reward_definitions.update"
+      : "reward_definitions.create";
 
-  if (!reason?.trim()) {
-    return;
-  }
-
+  setActionBanner(
+    isUpdate
+      ? "Updating reward definition..."
+      : "Creating reward definition..."
+  );
 
   try {
-
-    const action =
-      state.editingReward
-        ? "reward_definitions.update"
-        : "reward_definitions.create";
-
-
     await adminApi(
       action,
       {
@@ -2069,188 +1981,239 @@ async function saveRewardDefinition() {
         rewardCategory,
         rewardType,
         rewardValue,
-        verificationMethod,
+        verificationMethod:
+          verificationMethod || null,
         tournamentTypeId,
-        reason: reason.trim()
+
+        /*
+         * Backend requires a reason for
+         * reward-definition mutations.
+         *
+         * This is not business logic; it is
+         * an operator input passed to backend.
+         */
+        reason:
+          isUpdate
+            ? "Reward definition updated from Awards module."
+            : "Reward definition created from Awards module."
       }
     );
-
 
     state.editingReward = null;
 
-    await loadAll();
-
-    state.tab = "definitions";
-
-    renderTab();
-
-  } catch (error) {
-
-    setMessage(
-      message,
-      error?.message ||
-      "Unable to save reward definition."
+    setActionBanner(
+      isUpdate
+        ? "Reward definition updated."
+        : "Reward definition created."
     );
 
+    await loadAll();
+
+  } catch (error) {
+    console.error(
+      "KTMS reward definition operation failed:",
+      error
+    );
+
+    setActionBanner(
+      error?.message ||
+      "Reward definition operation failed.",
+      true
+    );
   }
 }
 
 
-/* =========================================================
-   ENABLE / DISABLE REWARD DEFINITION
-   ========================================================= */
-
-async function changeRewardDefinitionStatus(
-  rewardDefinitionId,
-  rewardStatus
+async function toggleRewardDefinition(
+  definition
 ) {
-  const reason =
-    window.prompt(
-      `${
-        rewardStatus === "Active"
-          ? "Enable"
-          : "Disable"
-      } this reward definition. Reason:`
+  const id =
+    getRewardDefinitionId(
+      definition
     );
 
+  const currentStatus =
+    getRewardDefinitionStatus(
+      definition
+    );
 
-  if (!reason?.trim()) {
-    return;
-  }
+  const nextStatus =
+    currentStatus === "Active"
+      ? "Disabled"
+      : "Active";
 
+  setActionBanner(
+    `${
+      nextStatus === "Active"
+        ? "Enabling"
+        : "Disabling"
+    } reward definition...`
+  );
 
   try {
-
     await adminApi(
       "reward_definitions.status",
       {
-        rewardDefinitionId,
-        rewardStatus,
-        reason: reason.trim()
+        rewardDefinitionId: id,
+        rewardStatus: nextStatus,
+        reason:
+          nextStatus === "Active"
+            ? "Reward definition enabled from Awards module."
+            : "Reward definition disabled from Awards module."
       }
     );
 
+    setActionBanner(
+      `Reward definition ${
+        nextStatus === "Active"
+          ? "enabled"
+          : "disabled"
+      }.`
+    );
 
     await loadAll();
 
-    state.tab = "definitions";
-
-    renderTab();
-
   } catch (error) {
-
-    window.alert(
-      error?.message ||
-      "Unable to change reward definition status."
+    console.error(
+      "KTMS reward definition status operation failed:",
+      error
     );
 
+    setActionBanner(
+      error?.message ||
+      "Reward definition status operation failed.",
+      true
+    );
   }
 }
 
 
 /* =========================================================
-   REWARD DEFINITION FILTERING
+   PRESENTATION FILTERING
    ========================================================= */
 
+function getFilteredAwards() {
+  const search =
+    state.awardFilters.registrationSearch
+      .trim()
+      .toLowerCase();
+
+  return state.awards.filter(
+    (award) => {
+
+      if (!search) {
+        return true;
+      }
+
+      const registrationId =
+        String(
+          getAwardRegistrationId(
+            award
+          )
+        ).toLowerCase();
+
+      const awardId =
+        String(
+          getAwardId(award)
+        ).toLowerCase();
+
+      const playerId =
+        String(
+          award?.player_id ??
+          award?.playerId ??
+          ""
+        ).toLowerCase();
+
+      return (
+        registrationId.includes(search) ||
+        awardId.includes(search) ||
+        playerId.includes(search)
+      );
+    }
+  );
+}
+
+
 function getFilteredRewardDefinitions() {
-  const category =
-    state.filters.definitionCategory
-      .trim()
-      .toLowerCase();
+  const filters =
+    state.definitionFilters;
 
-  const rewardType =
-    state.filters.definitionType
-      .trim()
-      .toLowerCase();
-
-
-  return state.rewards.filter(
-    (reward) => {
+  return state.rewardDefinitions.filter(
+    (definition) => {
 
       const status =
-        definitionField(
-          reward,
-          "reward_status",
-          "rewardStatus"
-        ) || "Active";
+        getRewardDefinitionStatus(
+          definition
+        );
 
       const tournamentType =
-        definitionField(
-          reward,
-          "tournament_type_id",
-          "tournamentTypeId"
+        String(
+          definition?.tournament_type_id ??
+          definition?.tournamentTypeId ??
+          ""
         );
 
-      const rewardCategory =
-        definitionField(
-          reward,
-          "reward_category",
-          "rewardCategory"
-        );
+      const category =
+        String(
+          definition?.reward_category ??
+          definition?.rewardCategory ??
+          ""
+        ).toLowerCase();
 
-      const type =
-        definitionField(
-          reward,
-          "reward_type",
-          "rewardType"
+      const rewardType =
+        String(
+          definition?.reward_type ??
+          definition?.rewardType ??
+          ""
         );
 
       const verification =
-        definitionField(
-          reward,
-          "verification_method",
-          "verificationMethod"
+        String(
+          definition?.verification_method ??
+          definition?.verificationMethod ??
+          ""
         );
 
-
       if (
-        state.filters.definitionStatus &&
-        status !==
-          state.filters.definitionStatus
+        filters.status &&
+        status !== filters.status
       ) {
         return false;
       }
 
-
       if (
-        state.filters.definitionTournamentType &&
+        filters.tournamentTypeId &&
         tournamentType !==
-          state.filters.definitionTournamentType
+          filters.tournamentTypeId
       ) {
         return false;
       }
 
-
       if (
-        category &&
-        !String(
-          rewardCategory || ""
+        filters.category &&
+        !category.includes(
+          filters.category
+            .toLowerCase()
         )
-          .toLowerCase()
-          .includes(category)
       ) {
         return false;
       }
 
-
       if (
-        rewardType &&
-        !String(type || "")
-          .toLowerCase()
-          .includes(rewardType)
+        filters.rewardType &&
+        rewardType !==
+          filters.rewardType
       ) {
         return false;
       }
 
-
       if (
-        state.filters.definitionVerification &&
+        filters.verificationMethod &&
         verification !==
-          state.filters.definitionVerification
+          filters.verificationMethod
       ) {
         return false;
       }
-
 
       return true;
     }
@@ -2259,67 +2222,7 @@ function getFilteredRewardDefinitions() {
 
 
 /* =========================================================
-   ACTION BANNER
-   ========================================================= */
-
-function renderActionBanner() {
-  const pendingAdminAwards =
-    state.awards.filter(
-      isPendingAdminAward
-    ).length;
-
-
-  if (!pendingAdminAwards) {
-
-    setActionBanner("");
-
-    return;
-  }
-
-
-  setActionBanner(`
-    <div class="ktms-award-action-banner">
-
-      <div>
-
-        <strong>
-          ${pendingAdminAwards}
-          admin-verified award
-          ${
-            pendingAdminAwards === 1
-              ? "requires"
-              : "require"
-          }
-          action.
-        </strong>
-
-        <p>
-          Open the Award Operations section
-          to approve or disapprove the award.
-        </p>
-
-      </div>
-
-    </div>
-  `);
-}
-
-
-function setActionBanner(html) {
-  const element =
-    document.getElementById(
-      "awards-action-banner"
-    );
-
-  if (element) {
-    element.innerHTML =
-      html || "";
-  }
-}
-
-
-/* =========================================================
-   AWARD HELPERS
+   AWARD PRESENTATION HELPERS
    ========================================================= */
 
 function isPendingAdminAward(award) {
@@ -2330,82 +2233,97 @@ function isPendingAdminAward(award) {
     return false;
   }
 
-
-  const rewardDefinition =
+  /*
+   * Prefer backend-returned verification data.
+   *
+   * If get_kt_awards() only returns kt_awards,
+   * the reward definition is used purely to
+   * display the verification method.
+   */
+  const reward =
     findRewardDefinition(
       getAwardRewardDefinitionId(
         award
       )
     );
 
-
   const verification =
     award?.verification_method ??
     award?.verificationMethod ??
-    rewardDefinition?.verification_method ??
-    rewardDefinition?.verificationMethod ??
+    reward?.verification_method ??
+    reward?.verificationMethod ??
     "";
 
-
   return (
-    String(verification)
-      .toLowerCase() ===
+    String(
+      verification
+    ).toLowerCase() ===
     "admin"
   );
 }
 
 
+function findRewardDefinition(id) {
+  if (!id) {
+    return null;
+  }
+
+  return (
+    state.rewardDefinitions.find(
+      (definition) =>
+        getRewardDefinitionId(
+          definition
+        ) === String(id)
+    ) || null
+  );
+}
+
+
+function findTournamentName(id) {
+  if (!id) {
+    return "—";
+  }
+
+  const tournament =
+    state.tournaments.find(
+      (item) =>
+        getTournamentId(item) ===
+        String(id)
+    );
+
+  return tournament
+    ? getTournamentName(tournament)
+    : String(id);
+}
+
+
+/* =========================================================
+   FIELD ACCESS
+   ========================================================= */
+
 function awardStatus(award) {
   return String(
     award?.prize_status ??
     award?.prizeStatus ??
-    award?.status ??
-    "Pending"
+    "—"
   );
 }
 
 
 function getAwardId(award) {
-  return (
+  return String(
     award?.award_id ??
     award?.awardId ??
-    award?.id ??
     "—"
   );
 }
 
 
-function getAwardPlayerName(award) {
-  return (
-    award?.player_name ??
-    award?.playerName ??
-    award?.manager_name ??
-    award?.managerName ??
-    award?.player_display_name ??
-    award?.playerDisplayName ??
-    award?.registration_player_name ??
-    award?.registrationPlayerName ??
-    award?.player_id ??
-    award?.playerId ??
+function getAwardRegistrationId(award) {
+  return String(
+    award?.registration_id ??
+    award?.registrationId ??
     "—"
-  );
-}
-
-
-function getAwardPlayerId(award) {
-  return (
-    award?.player_id ??
-    award?.playerId ??
-    ""
-  );
-}
-
-
-function getAwardTournamentId(award) {
-  return (
-    award?.tournament_id ??
-    award?.tournamentId ??
-    ""
   );
 }
 
@@ -2413,7 +2331,7 @@ function getAwardTournamentId(award) {
 function getAwardRewardDefinitionId(
   award
 ) {
-  return (
+  return String(
     award?.reward_definition_id ??
     award?.rewardDefinitionId ??
     ""
@@ -2421,15 +2339,19 @@ function getAwardRewardDefinitionId(
 }
 
 
-/* =========================================================
-   TOURNAMENT HELPERS
-   ========================================================= */
+function getAwardTournamentId(award) {
+  return String(
+    award?.tournament_id ??
+    award?.tournamentId ??
+    ""
+  );
+}
+
 
 function getTournamentId(tournament) {
-  return (
+  return String(
     tournament?.tournament_id ??
     tournament?.tournamentId ??
-    tournament?.id ??
     ""
   );
 }
@@ -2446,116 +2368,109 @@ function getTournamentName(tournament) {
 }
 
 
-function findTournamentName(
-  tournamentId
+function getRewardDefinitionId(
+  definition
 ) {
-  if (!tournamentId) {
-    return "—";
-  }
-
-
-  const tournament =
-    state.tournaments.find(
-      (item) =>
-        getTournamentId(item) ===
-        tournamentId
-    );
-
-
-  if (!tournament) {
-    return tournamentId;
-  }
-
-
-  return getTournamentName(
-    tournament
-  );
-}
-
-
-/* =========================================================
-   REWARD HELPERS
-   ========================================================= */
-
-function findRewardDefinition(id) {
-  if (!id) {
-    return null;
-  }
-
-
-  return (
-    state.rewards.find(
-      (reward) =>
-        definitionField(
-          reward,
-          "reward_definition_id",
-          "rewardDefinitionId"
-        ) === id
-    ) || null
-  );
-}
-
-
-function definitionField(
-  row,
-  snakeCase,
-  camelCase
-) {
-  return (
-    row?.[snakeCase] ??
-    row?.[camelCase] ??
+  return String(
+    definition?.reward_definition_id ??
+    definition?.rewardDefinitionId ??
     ""
   );
 }
 
 
+function getRewardDefinitionName(
+  definition
+) {
+  return String(
+    definition?.reward_name ??
+    definition?.rewardName ??
+    "—"
+  );
+}
+
+
+function getRewardDefinitionStatus(
+  definition
+) {
+  return String(
+    definition?.reward_status ??
+    definition?.rewardStatus ??
+    "—"
+  );
+}
+
+
 /* =========================================================
-   ADMIN ROLE HELPERS
+   ADMIN ROLE
    ========================================================= */
 
 function isGameMaster() {
   return (
     String(
-      state.admin?.role || ""
+      state.admin?.role ||
+      ""
     ) === "Game Master"
   );
 }
 
 
-function isModerator() {
-  return (
-    String(
-      state.admin?.role || ""
-    ) === "Moderator"
-  );
-}
-
-
 /* =========================================================
-   RESPONSE HELPERS
+   RESPONSE NORMALIZATION
    ========================================================= */
 
-function extractArray(
-  response,
-  preferredKeys = []
-) {
+function toArray(response) {
   if (Array.isArray(response)) {
     return response;
   }
 
-
-  for (
-    const key of preferredKeys
+  if (
+    Array.isArray(
+      response?.data
+    )
   ) {
-    if (
-      Array.isArray(
-        response?.[key]
-      )
-    ) {
-      return response[key];
-    }
+    return response.data;
   }
 
+  if (
+    Array.isArray(
+      response?.items
+    )
+  ) {
+    return response.items;
+  }
+
+  if (
+    Array.isArray(
+      response?.awards
+    )
+  ) {
+    return response.awards;
+  }
+
+  if (
+    Array.isArray(
+      response?.rewardDefinitions
+    )
+  ) {
+    return response.rewardDefinitions;
+  }
+
+  if (
+    Array.isArray(
+      response?.reward_definitions
+    )
+  ) {
+    return response.reward_definitions;
+  }
+
+  if (
+    Array.isArray(
+      response?.tournaments
+    )
+  ) {
+    return response.tournaments;
+  }
 
   return [];
 }
@@ -2570,14 +2485,22 @@ function summaryCard(
   value
 ) {
   return `
-    <div class="ktms-award-summary-card">
+    <div class="ktms-card">
 
-      <span>
+      <div class="ktms-muted">
         ${escapeHtml(label)}
-      </span>
+      </div>
 
-      <strong>
-        ${escapeHtml(value)}
+      <strong
+        style="
+          display:block;
+          font-size:24px;
+          margin-top:6px;
+        "
+      >
+        ${escapeHtml(
+          String(value)
+        )}
       </strong>
 
     </div>
@@ -2585,53 +2508,139 @@ function summaryCard(
 }
 
 
-function getInputValue(id) {
-  return (
-    document
-      .getElementById(id)
-      ?.value
-      ?.trim() || ""
-  );
+function statusOption(
+  value,
+  selected
+) {
+  return `
+    <option
+      value="${escapeAttribute(value)}"
+      ${
+        selected === value
+          ? "selected"
+          : ""
+      }
+    >
+      ${escapeHtml(value)}
+    </option>
+  `;
 }
 
 
-function setMessage(
-  element,
-  message
+function typeOption(
+  value,
+  selected
 ) {
-  if (element) {
-    element.textContent =
-      message || "";
+  return `
+    <option
+      value="${escapeAttribute(value)}"
+      ${
+        selected === value
+          ? "selected"
+          : ""
+      }
+    >
+      ${escapeHtml(value)}
+    </option>
+  `;
+}
+
+
+function editorOption(
+  value,
+  selected
+) {
+  return `
+    <option
+      value="${escapeAttribute(value)}"
+      ${
+        String(selected || "") ===
+        value
+          ? "selected"
+          : ""
+      }
+    >
+      ${escapeHtml(value)}
+    </option>
+  `;
+}
+
+
+function valueOf(id) {
+  return String(
+    document.getElementById(id)
+      ?.value ||
+    ""
+  ).trim();
+}
+
+
+function setActionBanner(
+  message,
+  isError = false
+) {
+  const banner =
+    document.getElementById(
+      "awards-action-banner"
+    );
+
+  if (!banner) {
+    return;
   }
+
+  if (!message) {
+    banner.innerHTML = "";
+    return;
+  }
+
+  banner.innerHTML = `
+    <div
+      class="ktms-award-action-banner"
+      ${
+        isError
+          ? 'data-state="error"'
+          : ""
+      }
+    >
+      ${escapeHtml(message)}
+    </div>
+  `;
+}
+
+
+function formatDateTime(value) {
+  if (!value) {
+    return "";
+  }
+
+  const date =
+    new Date(value);
+
+  if (
+    Number.isNaN(
+      date.getTime()
+    )
+  ) {
+    return String(value);
+  }
+
+  return date.toLocaleString();
 }
 
 
 /* =========================================================
-   ESCAPING
+   HTML SAFETY
    ========================================================= */
 
 function escapeHtml(value) {
-  return String(value ?? "")
-    .replaceAll(
-      "&",
-      "&amp;"
-    )
-    .replaceAll(
-      "<",
-      "&lt;"
-    )
-    .replaceAll(
-      ">",
-      "&gt;"
-    )
-    .replaceAll(
-      '"',
-      "&quot;"
-    )
-    .replaceAll(
-      "'",
-      "&#039;"
-    );
+  return String(
+    value ?? ""
+  )
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
 }
 
 
