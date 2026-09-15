@@ -10,6 +10,7 @@ import { renderFixtures } from "../modules/fixtures/fixtures.js";
 import { renderResults } from "../modules/results/results.js";
 import { renderStandings } from "../modules/standings/standings.js";
 import { renderProgression } from "../modules/progression/progression.js";
+import { renderAwards } from "../modules/awards/awards.js";
 
 const navigation = [
   ["dashboard", "Dashboard", "/dashboard"],
@@ -166,6 +167,10 @@ export async function renderRoute(page, route, admin) {
 
   if (route === "progression") {
   return renderProgression(content);
+}
+
+  if (route === "awards") {
+  return renderAwards(content, admin);
 }
 
   content.innerHTML = `
