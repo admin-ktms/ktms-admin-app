@@ -53,45 +53,21 @@ export async function renderSupport(page, admin) {
   state.admin = admin;
 
   page.innerHTML = `
-    <div class="ktms-module">
-
-      <div class="ktms-module-toolbar">
-
-        <div>
-          <h2>Support</h2>
-
-          <p>
-            Manage player support cases, disputes and appeals.
-            All case communications and decisions remain auditable.
-          </p>
-        </div>
-
-        <button
-          id="support-refresh"
-          class="ktms-secondary-button"
-          type="button"
-        >
-          REFRESH
-        </button>
-
-      </div>
-
-      <div
-        id="support-message"
-        class="ktms-message"
-        aria-live="polite"
-      ></div>
-
-      <div id="support-content">
-        Loading...
-      </div>
-
-    </div>
+    ...
   `;
 
   bindToolbarEvents();
 
   await loadCases();
+}
+
+
+function bindToolbarEvents() {
+  document
+    .getElementById("support-refresh")
+    ?.addEventListener("click", async () => {
+      await loadCases();
+    });
 }
 
 
