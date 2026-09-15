@@ -2,31 +2,17 @@ import { supabase } from "../lib/supabase.js";
 
 import {
   adminApi,
-  requestAdminVerificationCode, 
+  requestAdminVerificationCode,
   getStoredAdminSessionToken,
   storeAdminSessionToken,
   clearAdminSessionToken
 } from "../api/admin-api.js";
 
 
-/*
- * Requests an administrator verification code.
- *
- * IMPORTANT:
- *
- * The browser must NOT call
- * supabase.auth.signInWithOtp()
- * directly here.
- *
- * The request first goes through the
- * KTMS admin-login Edge Function so that
- * KTMS can:
- *
- * 1. Validate the administrator.
- * 2. Apply login-request controls.
- * 3. Record admin_login_attempts.
- * 4. Request the Supabase Auth OTP.
- */
+/* =========================================================
+   REQUEST ADMIN VERIFICATION CODE
+   ========================================================= */
+
 export async function sendVerificationCode(
   email
 ) {
@@ -36,9 +22,14 @@ export async function sendVerificationCode(
       .toLowerCase();
 
   if (!normalizedEmail) {
-    throw new Error(
+    const error = new Error(
       "Email address is required."
     );
+
+    error.code =
+      "EMAIL_REQUIRED";
+
+    throw error;
   }
 
   await requestAdminVerificationCode(
@@ -49,14 +40,10 @@ export async function sendVerificationCode(
 }
 
 
-/*
- * Verifies the OTP received by the
- * administrator through Supabase Auth.
- *
- * This remains a direct Supabase Auth
- * operation because the administrator now
- * possesses the verification code.
- */
+/* =========================================================
+   VERIFY SUPABASE AUTH OTP
+   ========================================================= */
+
 export async function verifyVerificationCode(
   email,
   token
@@ -86,31 +73,67 @@ export async function verifyVerificationCode(
     data,
     error
   } = await supabase.auth.verifyOtp({
-    email: normalizedEmail,
-    token: normalizedToken,
-    type: "email"
+    email:
+      normalizedEmail,
+
+    token:
+      normalizedToken,
+
+    type:
+      "email"
   });
 
   if (error) {
     throw error;
   }
 
-  if (!data?.session) {
+  if (!data?.session?.access_token) {
     throw new Error(
-      "Authentication succeeded but no session was created."
+      "Authentication succeeded but no Supabase Auth session was created."
     );
   }
 
-  return data.session;
+  /*
+   * Confirm that the Supabase client can see
+   * the authenticated session that will be used
+   * by the KTMS Admin API.
+   */
+  const {
+    data: {
+      session
+    },
+    error: sessionError
+  } =
+    await supabase.auth.getSession();
+
+  if (sessionError) {
+    throw sessionError;
+  }
+
+  if (!session?.access_token) {
+    throw new Error(
+      "Supabase authentication completed, but the browser session is unavailable."
+    );
+  }
+
+  return session;
 }
 
 
-/*
- * Creates the KTMS application-level
- * administrator session after Supabase
- * authentication succeeds.
- */
+/* =========================================================
+   CREATE KTMS ADMIN SESSION
+   ========================================================= */
+
 export async function startAdminSession() {
+  /*
+   * admin.session.start requires:
+   *
+   * Authorization: Bearer <Supabase Auth access token>
+   *
+   * It does NOT require an existing
+   * X-KTMS-Admin-Session header because it is
+   * responsible for creating that session.
+   */
   const data =
     await adminApi(
       "admin.session.start"
@@ -133,11 +156,18 @@ export async function startAdminSession() {
 }
 
 
+/* =========================================================
+   CURRENT SUPABASE SESSION
+   ========================================================= */
+
 export async function getCurrentSession() {
   const {
-    data: { session },
+    data: {
+      session
+    },
     error
-  } = await supabase.auth.getSession();
+  } =
+    await supabase.auth.getSession();
 
   if (error) {
     throw error;
@@ -147,6 +177,10 @@ export async function getCurrentSession() {
 }
 
 
+/* =========================================================
+   CURRENT KTMS ADMIN IDENTITY
+   ========================================================= */
+
 export async function getAdminIdentity() {
   return await adminApi(
     "admin.me"
@@ -154,13 +188,10 @@ export async function getAdminIdentity() {
 }
 
 
-/*
- * Logout order:
- *
- * 1. Revoke the KTMS administrator session.
- * 2. Remove the browser-side session token.
- * 3. Sign out of Supabase Auth.
- */
+/* =========================================================
+   LOGOUT
+   ========================================================= */
+
 export async function logout() {
   const adminSessionToken =
     getStoredAdminSessionToken();
@@ -171,10 +202,6 @@ export async function logout() {
         "admin.session.logout"
       );
     } catch (error) {
-      /*
-       * If the KTMS session is already expired
-       * or rejected, continue with local logout.
-       */
       console.warn(
         "KTMS administrator session logout warning:",
         error
@@ -184,7 +211,9 @@ export async function logout() {
 
   clearAdminSessionToken();
 
-  const { error } =
+  const {
+    error
+  } =
     await supabase.auth.signOut();
 
   if (error) {
