@@ -6004,3 +6004,614 @@ a:hover {
     grid-template-columns: 1fr;
   }
 }
+/* =========================================================
+   KTMS PROGRESSION MODULE
+   ========================================================= */
+
+.ktms-progression-module {
+  width: 100%;
+  min-width: 0;
+}
+
+/* =========================================================
+   TOOLBAR
+   ========================================================= */
+
+.ktms-progression-toolbar {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 24px;
+}
+
+.ktms-progression-toolbar h2 {
+  margin: 0;
+  color: #f5f7fa;
+  font-size: 24px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.ktms-progression-toolbar p {
+  margin: 8px 0 0;
+  color: #8b95a5;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.ktms-progression-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.ktms-progression-controls select {
+  min-width: 240px;
+}
+
+/* =========================================================
+   HEADER CARD
+   ========================================================= */
+
+.ktms-progression-header-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+
+  padding: 22px;
+
+  background: #11151d;
+  border: 1px solid #252b36;
+  border-radius: 12px;
+
+  margin-bottom: 18px;
+}
+
+.ktms-progression-eyebrow {
+  display: block;
+
+  margin-bottom: 8px;
+
+  color: #00d9ff;
+
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+}
+
+.ktms-progression-header-card h3 {
+  margin: 0;
+
+  color: #f5f7fa;
+
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.ktms-progression-header-card code {
+  display: inline-block;
+
+  margin-top: 8px;
+
+  color: #8b95a5;
+
+  font-size: 12px;
+}
+
+.ktms-progression-header-status {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+
+  text-align: right;
+}
+
+.ktms-progression-header-status small {
+  color: #8b95a5;
+  font-size: 12px;
+}
+
+/* =========================================================
+   STATUS
+   ========================================================= */
+
+.ktms-progression-status {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  min-height: 26px;
+  padding: 4px 9px;
+
+  border: 1px solid #252b36;
+  border-radius: 999px;
+
+  color: #f5f7fa;
+
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.ktms-progression-status-registration-open,
+.ktms-progression-status-active,
+.ktms-progression-status-current {
+  border-color: #00d9ff;
+  color: #00d9ff;
+}
+
+.ktms-progression-status-completed {
+  border-color: #00d9ff;
+  color: #00d9ff;
+}
+
+.ktms-progression-status-archived {
+  border-color: #8b95a5;
+  color: #8b95a5;
+}
+
+.ktms-progression-status-scheduled {
+  color: #8b95a5;
+}
+
+.ktms-progression-status-completed,
+.ktms-progression-status-resolved {
+  color: #00d9ff;
+}
+
+.ktms-progression-status-pending,
+.ktms-progression-status-not-started {
+  color: #8b95a5;
+}
+
+/* =========================================================
+   PIPELINE
+   ========================================================= */
+
+.ktms-progression-pipeline {
+  display: flex;
+  align-items: center;
+
+  width: 100%;
+
+  margin-bottom: 20px;
+
+  padding: 16px;
+
+  overflow-x: auto;
+
+  background: #11151d;
+  border: 1px solid #252b36;
+  border-radius: 12px;
+}
+
+.ktms-progression-stage {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  flex: 0 0 auto;
+
+  color: #8b95a5;
+
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.ktms-progression-stage-index {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 25px;
+  height: 25px;
+
+  border: 1px solid #252b36;
+  border-radius: 50%;
+
+  color: #8b95a5;
+
+  font-size: 10px;
+}
+
+.ktms-progression-stage.complete {
+  color: #f5f7fa;
+}
+
+.ktms-progression-stage.complete
+  .ktms-progression-stage-index {
+  border-color: #00d9ff;
+  color: #00d9ff;
+}
+
+.ktms-progression-stage.current {
+  color: #00d9ff;
+}
+
+.ktms-progression-stage.current
+  .ktms-progression-stage-index {
+  border-color: #00d9ff;
+  background: #00d9ff;
+  color: #080a0f;
+}
+
+.ktms-progression-stage-line {
+  flex: 1 1 24px;
+
+  min-width: 18px;
+  height: 1px;
+
+  margin: 0 8px;
+
+  background: #252b36;
+}
+
+/* =========================================================
+   SUMMARY
+   ========================================================= */
+
+.ktms-progression-summary-grid {
+  display: grid;
+
+  grid-template-columns:
+    repeat(6, minmax(0, 1fr));
+
+  gap: 12px;
+
+  margin-bottom: 24px;
+}
+
+.ktms-progression-summary-card {
+  min-width: 0;
+
+  padding: 16px;
+
+  background: #11151d;
+  border: 1px solid #252b36;
+  border-radius: 10px;
+}
+
+.ktms-progression-summary-card span {
+  display: block;
+
+  margin-bottom: 8px;
+
+  color: #8b95a5;
+
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.ktms-progression-summary-card strong {
+  display: block;
+
+  overflow: hidden;
+
+  color: #f5f7fa;
+
+  font-size: 20px;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* =========================================================
+   SECTIONS
+   ========================================================= */
+
+.ktms-progression-section {
+  margin-bottom: 24px;
+
+  padding: 20px;
+
+  background: #11151d;
+  border: 1px solid #252b36;
+  border-radius: 12px;
+}
+
+.ktms-progression-section-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+
+  margin-bottom: 16px;
+}
+
+.ktms-progression-section-heading h3 {
+  margin: 0;
+
+  color: #f5f7fa;
+
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.ktms-progression-section-heading p {
+  margin: 6px 0 0;
+
+  color: #8b95a5;
+
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+/* =========================================================
+   MATCHDAYS
+   ========================================================= */
+
+.ktms-progression-matchdays {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ktms-progression-matchday {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+
+  padding: 13px 14px;
+
+  border: 1px solid #252b36;
+  border-radius: 9px;
+
+  background: #080a0f;
+}
+
+.ktms-progression-matchday-number {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  flex: 0 0 38px;
+
+  height: 38px;
+
+  border: 1px solid #252b36;
+  border-radius: 8px;
+
+  color: #00d9ff;
+
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.ktms-progression-matchday-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.ktms-progression-matchday-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  gap: 12px;
+}
+
+.ktms-progression-matchday-title-row strong {
+  color: #f5f7fa;
+
+  font-size: 13px;
+}
+
+.ktms-progression-matchday-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+
+  margin-top: 5px;
+
+  color: #8b95a5;
+
+  font-size: 11px;
+}
+
+/* =========================================================
+   GROUPS
+   ========================================================= */
+
+.ktms-progression-group-grid {
+  display: grid;
+
+  grid-template-columns:
+    repeat(4, minmax(0, 1fr));
+
+  gap: 10px;
+}
+
+.ktms-progression-group-card {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+
+  min-width: 0;
+
+  padding: 14px;
+
+  background: #080a0f;
+  border: 1px solid #252b36;
+  border-radius: 9px;
+}
+
+.ktms-progression-group-card strong {
+  overflow: hidden;
+
+  color: #f5f7fa;
+
+  font-size: 13px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ktms-progression-group-card span {
+  color: #8b95a5;
+
+  font-size: 11px;
+}
+
+.ktms-progression-group-card small {
+  color: #00d9ff;
+
+  font-size: 10px;
+}
+
+/* =========================================================
+   RULE NOTE
+   ========================================================= */
+
+.ktms-progression-rule-note {
+  padding: 15px 17px;
+
+  background: #11151d;
+  border: 1px solid #252b36;
+  border-left: 3px solid #ffc857;
+  border-radius: 9px;
+
+  color: #8b95a5;
+
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.ktms-progression-rule-note strong {
+  color: #ffc857;
+}
+
+/* =========================================================
+   EMPTY / LOADING / ERROR
+   ========================================================= */
+
+.ktms-progression-empty {
+  padding: 32px 20px;
+
+  color: #8b95a5;
+
+  font-size: 13px;
+  text-align: center;
+}
+
+.ktms-progression-loading {
+  padding: 20px;
+
+  color: #00d9ff;
+
+  font-size: 13px;
+  text-align: center;
+}
+
+.ktms-progression-error {
+  margin-bottom: 18px;
+  padding: 13px 15px;
+
+  background: #11151d;
+  border: 1px solid #252b36;
+  border-left: 3px solid #ffc857;
+  border-radius: 8px;
+
+  color: #f5f7fa;
+
+  font-size: 12px;
+}
+
+/* =========================================================
+   RESPONSIVE
+   ========================================================= */
+
+@media (max-width: 1100px) {
+  .ktms-progression-summary-grid {
+    grid-template-columns:
+      repeat(3, minmax(0, 1fr));
+  }
+
+  .ktms-progression-group-grid {
+    grid-template-columns:
+      repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 800px) {
+  .ktms-progression-toolbar {
+    flex-direction: column;
+  }
+
+  .ktms-progression-controls {
+    width: 100%;
+  }
+
+  .ktms-progression-controls select {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .ktms-progression-header-card {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .ktms-progression-header-status {
+    align-items: flex-start;
+    text-align: left;
+  }
+
+  .ktms-progression-summary-grid {
+    grid-template-columns:
+      repeat(2, minmax(0, 1fr));
+  }
+
+  .ktms-progression-group-grid {
+    grid-template-columns:
+      repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 520px) {
+  .ktms-progression-controls {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .ktms-progression-controls select {
+    width: 100%;
+  }
+
+  .ktms-progression-controls button {
+    width: 100%;
+  }
+
+  .ktms-progression-summary-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  .ktms-progression-summary-card {
+    padding: 12px;
+  }
+
+  .ktms-progression-summary-card strong {
+    font-size: 17px;
+  }
+
+  .ktms-progression-group-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .ktms-progression-matchday {
+    align-items: flex-start;
+  }
+
+  .ktms-progression-matchday-title-row {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .ktms-progression-pipeline {
+    padding: 12px;
+  }
+}
