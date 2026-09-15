@@ -7020,7 +7020,7 @@ a:hover {
 }
 
 /* =========================================================
-   AWARDS MODULE
+   AWARDS MODULE. (above is progression module matchday css)
    ========================================================= */
 
 .ktms-awards-tabs {
@@ -7146,5 +7146,199 @@ a:hover {
 @media (max-width: 520px) {
   .ktms-award-summary-grid {
     grid-template-columns: 1fr;
+  }
+}
+/* =========================================================
+   KTMS NOTIFICATIONS
+   ========================================================= */
+
+.ktms-notification-tabs {
+  display: flex;
+  gap: 8px;
+  margin: 20px 0;
+  border-bottom: 1px solid #252B36;
+  overflow-x: auto;
+}
+
+.ktms-notification-tab {
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: #8B95A5;
+  padding: 12px 16px;
+  cursor: pointer;
+  font: inherit;
+  white-space: nowrap;
+}
+
+.ktms-notification-tab:hover {
+  color: #F5F7FA;
+}
+
+.ktms-notification-tab.active {
+  color: #00D9FF;
+  border-bottom-color: #00D9FF;
+}
+
+.ktms-notification-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  margin-left: 6px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: #252B36;
+  color: #F5F7FA;
+  font-size: 12px;
+}
+
+.ktms-notification-list {
+  display: grid;
+  gap: 12px;
+}
+
+.ktms-notification-card {
+  background: #11151D;
+  border: 1px solid #252B36;
+  border-radius: 10px;
+  padding: 18px;
+}
+
+.ktms-notification-card.unread {
+  border-color: #00D9FF;
+}
+
+.ktms-notification-card-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  align-items: flex-start;
+}
+
+.ktms-notification-subject {
+  color: #F5F7FA;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.ktms-notification-meta,
+.ktms-notification-routing,
+.ktms-notification-date,
+.ktms-notification-status {
+  color: #8B95A5;
+  font-size: 12px;
+}
+
+.ktms-notification-meta {
+  margin-top: 5px;
+}
+
+.ktms-notification-routing {
+  margin-top: 12px;
+}
+
+.ktms-notification-body {
+  margin-top: 14px;
+  color: #F5F7FA;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.ktms-notification-status {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.ktms-notification-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.ktms-notification-compose {
+  max-width: 900px;
+  background: #11151D;
+  border: 1px solid #252B36;
+  border-radius: 10px;
+  padding: 22px;
+}
+
+.ktms-compose-header {
+  margin-bottom: 20px;
+}
+
+.ktms-compose-header h3 {
+  margin: 0 0 6px;
+  color: #F5F7FA;
+}
+
+.ktms-compose-header p {
+  margin: 0;
+  color: #8B95A5;
+}
+
+.ktms-notification-compose form {
+  display: grid;
+  gap: 16px;
+}
+
+.ktms-notification-compose label {
+  display: grid;
+  gap: 7px;
+  color: #F5F7FA;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.ktms-notification-compose input,
+.ktms-notification-compose select,
+.ktms-notification-compose textarea {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid #252B36;
+  border-radius: 7px;
+  background: #080A0F;
+  color: #F5F7FA;
+  padding: 11px 12px;
+  font: inherit;
+}
+
+.ktms-notification-compose input:focus,
+.ktms-notification-compose select:focus,
+.ktms-notification-compose textarea:focus {
+  outline: none;
+  border-color: #00D9FF;
+}
+
+.ktms-form-grid {
+  display: grid;
+  grid-template-columns:
+    repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.ktms-form-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+@media (max-width: 700px) {
+  .ktms-form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .ktms-notification-card-header {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .ktms-notification-compose {
+    padding: 16px;
   }
 }
