@@ -11,6 +11,9 @@ import { renderResults } from "../modules/results/results.js";
 import { renderStandings } from "../modules/standings/standings.js";
 import { renderProgression } from "../modules/progression/progression.js";
 import { renderAwards } from "../modules/awards/awards.js";
+import {
+  renderNotifications
+} from "../modules/notifications/notifications.js";
 
 const navigation = [
   ["dashboard", "Dashboard", "/dashboard"],
@@ -172,6 +175,10 @@ export async function renderRoute(page, route, admin) {
   if (route === "awards") {
   return renderAwards(content, admin);
 }
+
+    if (route === "notifications") {
+    return renderNotifications(content, admin);
+  }
 
   content.innerHTML = `
     <div class="ktms-empty-state">
