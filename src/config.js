@@ -11,6 +11,9 @@ export const CONFIG = {
   ADMIN_LOGIN_API_URL:
   "https://gfokwfsqsttrjueqjojz.supabase.co/functions/v1/ktms-admin-login",
 
+  NOTIFICATION_SERVICE_URL:
+  "https://gfokwfsqsttrjueqjojz.supabase.co/functions/v1/ktms-notification-service",
+
   APP_NAME: "KTMS Admin",
 
   ROUTES: {
