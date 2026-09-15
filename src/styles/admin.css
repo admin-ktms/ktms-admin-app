@@ -6615,3 +6615,49 @@ a:hover {
     padding: 12px;
   }
 }
+/* =========================================================
+   KTMS LOGIN BUTTON LOADER
+   ========================================================= */
+
+.ktms-login-spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  display: inline-block;
+  animation: ktms-login-spin 0.7s linear infinite;
+  flex: 0 0 auto;
+}
+
+.ktms-login-primary:disabled {
+  cursor: wait;
+  opacity: 0.75;
+}
+
+.ktms-login-secondary:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
+@keyframes ktms-login-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* =========================================================
+   LOGIN RESULT STATES
+   ========================================================= */
+
+.ktms-message[data-status="verified"] {
+  color: #00D9FF;
+}
+
+.ktms-message[data-status="unauthorized"] {
+  color: #FFC857;
+}
+
+.ktms-message[data-status="failed"] {
+  color: #FFC857;
+}
