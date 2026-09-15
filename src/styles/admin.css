@@ -7342,3 +7342,65 @@ a:hover {
     padding: 16px;
   }
 }
+.ktms-notification-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: end;
+  margin-bottom: 18px;
+  padding: 14px;
+  background: #11151D;
+  border: 1px solid #252B36;
+  border-radius: 10px;
+}
+
+.ktms-notification-filters label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 170px;
+  color: #F5F7FA;
+  font-size: 13px;
+}
+
+.ktms-notification-filters select {
+  min-height: 38px;
+  padding: 8px 10px;
+  background: #080A0F;
+  color: #F5F7FA;
+  border: 1px solid #252B36;
+  border-radius: 7px;
+}
+
+.ktms-admin-oversight-header {
+  margin-bottom: 18px;
+  padding: 16px;
+  background: #11151D;
+  border: 1px solid #252B36;
+  border-radius: 10px;
+}
+
+.ktms-admin-oversight-header h3 {
+  margin: 0 0 6px;
+  color: #F5F7FA;
+}
+
+.ktms-admin-oversight-header p {
+  margin: 0;
+  color: #8B95A5;
+}
+
+#notification-recipient-search {
+  width: 100%;
+  min-height: 42px;
+  padding: 10px 12px;
+  background: #11151D;
+  color: #F5F7FA;
+  border: 1px solid #252B36;
+  border-radius: 7px;
+}
+
+#notification-recipient-search:focus {
+  outline: none;
+  border-color: #00D9FF;
+}
