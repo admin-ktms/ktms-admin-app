@@ -1,14 +1,13 @@
 import "./styles/admin.css";
 import { supabase } from "./lib/supabase.js";
-
 import {
   sendVerificationCode,
-  completeAdminLogin,
-  startAdminSession,
+  verifyVerificationCode,
   getCurrentSession,
   getAdminIdentity,
   logout
 } from "./auth/auth.js";
+
 
 import {
   adminApi,
@@ -335,10 +334,14 @@ function bindLoginEvents() {
       }
 
       try {
-        const admin = await completeAdminLogin(
-          email,
-          token
-        );
+        const authentication =
+          await verifyVerificationCode(
+            email,
+            token
+          );
+        
+        const admin =
+          authentication.admin;
 
         applicationReady = true;
 
