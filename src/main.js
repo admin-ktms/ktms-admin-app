@@ -36,15 +36,6 @@ if (!app) {
  * --------------------------------------------------------------------------
  * APPLICATION STATE
  * --------------------------------------------------------------------------
- *
- * applicationReady means the administrator has successfully authenticated
- * and we have a valid administrator identity for the current SPA session.
- *
- * currentAdmin is deliberately kept in memory.
- *
- * Navigation between modules must NOT re-authenticate the administrator
- * every time. A module rendering/API failure must never be interpreted as
- * an authentication failure.
  */
 
 let authenticationInProgress = false;
@@ -627,9 +618,7 @@ async function renderAdminShell(admin) {
   /*
    * IMPORTANT:
    *
-   * A page/module failure must remain a page/module failure.
-   *
-   * It must NOT propagate into the authentication handler and cause
+   * A page/module failure must NOT propagate into the authentication handler and cause
    * Supabase signOut().
    */
 
@@ -722,12 +711,6 @@ function renderModuleError(
  * --------------------------------------------------------------------------
  * ROUTING
  * --------------------------------------------------------------------------
- *
- * THIS IS THE CRITICAL CHANGE.
- *
- * Navigation does not call getAdminIdentity() again.
- *
- * The authenticated administrator identity already exists in currentAdmin.
  */
 
 async function handleRouteChange() {
@@ -752,12 +735,6 @@ async function handleRouteChange() {
     }
   }
 
-  /*
-   * Render the requested module using the existing administrator
-   * identity.
-   *
-   * renderAdminShell() contains its own module-level error boundary.
-   */
 
   await renderAdminShell(
     currentAdmin
@@ -854,12 +831,6 @@ supabase.auth.onAuthStateChange(
  */
 
 async function initialize() {
-  /*
-   * Do not immediately destroy an existing session.
-   *
-   * authenticate() will determine whether a valid Supabase session
-   * exists and whether the administrator identity is available.
-   */
 
   const session =
     await getCurrentSession();
