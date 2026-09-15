@@ -66,17 +66,74 @@ async function notificationApi(action, payload = {}) {
   return result.data ?? result;
 }
 
-export async function getNotificationInbox() {
+
+/* =========================================================
+   INBOX
+   ========================================================= */
+
+export async function getNotificationInbox(
+  filters = {}
+) {
   return notificationApi(
-    "notification.inbox"
+    "notification.inbox",
+    {
+      readStatus:
+        filters.readStatus &&
+        filters.readStatus !== "All"
+          ? filters.readStatus
+          : undefined,
+
+      notificationType:
+        filters.notificationType &&
+        filters.notificationType !== "All"
+          ? filters.notificationType
+          : undefined,
+
+      notificationMode:
+        filters.notificationMode &&
+        filters.notificationMode !== "All"
+          ? filters.notificationMode
+          : undefined
+    }
   );
 }
 
-export async function getNotificationSent() {
+
+/* =========================================================
+   SENT
+   ========================================================= */
+
+export async function getNotificationSent(
+  filters = {}
+) {
   return notificationApi(
-    "notification.sent"
+    "notification.sent",
+    {
+      readStatus:
+        filters.readStatus &&
+        filters.readStatus !== "All"
+          ? filters.readStatus
+          : undefined,
+
+      notificationType:
+        filters.notificationType &&
+        filters.notificationType !== "All"
+          ? filters.notificationType
+          : undefined,
+
+      notificationMode:
+        filters.notificationMode &&
+        filters.notificationMode !== "All"
+          ? filters.notificationMode
+          : undefined
+    }
   );
 }
+
+
+/* =========================================================
+   GAME MASTER ADMIN OVERSIGHT
+   ========================================================= */
 
 export async function getAdminNotificationCommunications() {
   return notificationApi(
@@ -84,11 +141,41 @@ export async function getAdminNotificationCommunications() {
   );
 }
 
+
+/* =========================================================
+   UNREAD COUNT
+   ========================================================= */
+
 export async function getNotificationUnreadCount() {
   return notificationApi(
     "notification.unreadCount"
   );
 }
+
+
+/* =========================================================
+   RECIPIENT SEARCH
+   ========================================================= */
+
+export async function searchNotificationRecipients(
+  recipientType,
+  search,
+  limit = 10
+) {
+  return notificationApi(
+    "notification.searchRecipients",
+    {
+      recipientType,
+      search,
+      limit
+    }
+  );
+}
+
+
+/* =========================================================
+   READ STATE
+   ========================================================= */
 
 export async function markNotificationRead(
   notificationId
@@ -112,6 +199,11 @@ export async function markNotificationUnread(
   );
 }
 
+
+/* =========================================================
+   DELIVERY RETRY
+   ========================================================= */
+
 export async function retryNotification(
   notificationId
 ) {
@@ -123,7 +215,14 @@ export async function retryNotification(
   );
 }
 
-export async function sendNotification(payload) {
+
+/* =========================================================
+   CREATE
+   ========================================================= */
+
+export async function sendNotification(
+  payload
+) {
   return notificationApi(
     "notification.create",
     payload
