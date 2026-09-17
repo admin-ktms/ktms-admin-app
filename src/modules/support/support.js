@@ -10,444 +10,237 @@ import {
 } from "../../api/support-api.js";
 
 
-const STATUS_OPTIONS = [
-  "Submitted",
-  "Under Review",
-  "Awaiting Player Information",
-  "Resolved",
-  "Rejected",
-  "Closed"
-];
-
-
-const TYPE_OPTIONS = [
-  "Support",
-  "Dispute",
-  "Appeal"
-];
-
+/* =========================================================
+   KTMS SUPPORT MODULE
+   ========================================================= */
 
 const state = {
   admin: null,
 
-  cases: [],
-  selectedCase: null,
-
   filters: {
-    filter: "",
+    filter: "All",
     caseType: "",
     caseCategory: "",
     search: ""
   },
 
-  loading: false,
-  selectedCaseLoading: false,
-  actionLoading: false
+  cases: [],
+  selectedCaseId: null,
+  selectedCase: null,
+
+  loadingList: false,
+  loadingDetail: false,
+  actionLoading: false,
+
+  error: "",
+  message: ""
 };
 
 
 /* =========================================================
-   MAIN
+   PUBLIC ENTRY POINT
    ========================================================= */
 
 export async function renderSupport(page, admin) {
-  state.admin = admin;
+  state.admin = admin || null;
 
   page.innerHTML = `
-    <div class="ktms-module">
+    <div class="ktms-support-module">
 
-      <div class="ktms-module-toolbar">
+      <div
+        id="support-message"
+        class="ktms-support-feedback"
+        aria-live="polite"
+      ></div>
+
+      <div class="ktms-support-toolbar">
 
         <div>
-          <h2>Support</h2>
+          <div class="ktms-support-kicker">
+            SUPPORT OPERATIONS
+          </div>
+
+          <h2>Case Management</h2>
 
           <p>
-            Manage player support cases, disputes and appeals.
-            All case communications and decisions remain auditable.
+            Review player support cases, disputes and appeals
+            without bypassing the authoritative KTMS services.
           </p>
         </div>
 
         <button
           id="support-refresh"
-          class="ktms-secondary-button"
           type="button"
+          class="ktms-primary-button"
         >
           REFRESH
         </button>
 
       </div>
 
-      <div
-        id="support-message"
-        class="ktms-message"
-        aria-live="polite"
-      ></div>
+      <div class="ktms-support-workspace">
 
-      <div id="support-content">
-        Loading...
+        <section class="ktms-support-queue">
+
+          <div class="ktms-support-queue-header">
+
+            <div>
+              <strong>Support Queue</strong>
+              <span id="support-case-count">0 cases</span>
+            </div>
+
+          </div>
+
+          <div class="ktms-support-filters">
+
+            <label class="ktms-support-field">
+              <span>Search</span>
+
+              <input
+                id="support-search"
+                type="search"
+                placeholder="Case ID, player, subject..."
+                autocomplete="off"
+              >
+            </label>
+
+            <label class="ktms-support-field">
+              <span>Status</span>
+
+              <select id="support-filter">
+                <option value="All">All</option>
+                <option value="Open">Open</option>
+                <option value="Disputes">Disputes</option>
+                <option value="Submitted">Submitted</option>
+                <option value="Under Review">Under Review</option>
+                <option value="Awaiting Player Information">
+                  Awaiting Player Information
+                </option>
+                <option value="Resolved">Resolved</option>
+                <option value="Rejected">Rejected</option>
+                <option value="Closed">Closed</option>
+              </select>
+            </label>
+
+            <label class="ktms-support-field">
+              <span>Case Type</span>
+
+              <select id="support-case-type">
+                <option value="">All types</option>
+                <option value="Dispute">Dispute</option>
+                <option value="Appeal">Appeal</option>
+                <option value="Support">Support</option>
+              </select>
+            </label>
+
+            <label class="ktms-support-field">
+              <span>Category</span>
+
+              <select id="support-case-category">
+                <option value="">All categories</option>
+              </select>
+            </label>
+
+          </div>
+
+          <div
+            id="support-case-list"
+            class="ktms-support-case-list"
+          >
+            ${renderListLoading()}
+          </div>
+
+        </section>
+
+        <section
+          id="support-case-detail"
+          class="ktms-support-detail"
+        >
+          ${renderEmptyDetail()}
+        </section>
+
       </div>
 
     </div>
   `;
 
-  bindToolbarEvents();
+  bindEvents();
 
   await loadCases();
 }
 
 
-function bindToolbarEvents() {
+/* =========================================================
+   EVENTS
+   ========================================================= */
+
+function bindEvents() {
   document
     .getElementById("support-refresh")
-    ?.addEventListener(
-      "click",
-      async () => {
-        if (state.loading) {
-          return;
-        }
-
-        await loadCases();
-      }
-    );
-}
-
-
-/* =========================================================
-   LOAD CASES
-   ========================================================= */
-
-async function loadCases() {
-  setMessage(
-    "Loading support cases...",
-    "info"
-  );
-
-  try {
-    state.loading = true;
-
-    const result =
-      await getSupportCases(
-        state.filters
-      );
-
-    state.cases =
-      normalizeRows(result);
-
-    renderWorkspace();
-
-    setMessage(
-      `${state.cases.length} support case${
-        state.cases.length === 1
-          ? ""
-          : "s"
-      } loaded.`,
-      "success"
-    );
-
-  } catch (error) {
-    console.error(
-      "KTMS support case load failed:",
-      error
-    );
-
-    state.cases = [];
-
-    const content =
-      document.getElementById(
-        "support-content"
-      );
-
-    if (content) {
-      content.innerHTML = `
-        <div class="ktms-error-card">
-
-          <strong>
-            Unable to load support cases.
-          </strong>
-
-          <p>
-            ${escapeHtml(
-              error?.message ||
-              "An unexpected error occurred."
-            )}
-          </p>
-
-        </div>
-      `;
-    }
-
-    setMessage(
-      error?.message ||
-      "Unable to load support cases.",
-      "error"
-    );
-
-  } finally {
-    state.loading = false;
-  }
-}
-
-
-/* =========================================================
-   WORKSPACE
-   ========================================================= */
-
-function renderWorkspace() {
-  const content =
-    document.getElementById(
-      "support-content"
-    );
-
-  if (!content) {
-    return;
-  }
-
-  content.innerHTML = `
-    <div class="ktms-support-workspace">
-
-      <div class="ktms-support-list-panel">
-
-        ${renderFilters()}
-
-        <div id="support-case-list">
-          ${renderCaseList()}
-        </div>
-
-      </div>
-
-      <div
-        class="ktms-support-detail-panel"
-        id="support-case-detail"
-      >
-        ${renderCaseDetail()}
-      </div>
-
-    </div>
-  `;
-
-  bindFilterEvents();
-  bindCaseSelectionEvents();
-  bindDetailEvents();
-}
-
-
-/* =========================================================
-   FILTERS
-   ========================================================= */
-
-function renderFilters() {
-  return `
-    <div class="ktms-card">
-
-      <div class="ktms-support-filter-grid">
-
-        <label class="ktms-form-field">
-
-          <span>
-            Search
-          </span>
-
-          <input
-            id="support-search"
-            type="search"
-            placeholder="Case ID, player, subject..."
-            value="${escapeAttribute(
-              state.filters.search
-            )}"
-          />
-
-        </label>
-
-
-        <label class="ktms-form-field">
-
-          <span>
-            Status
-          </span>
-
-          <select
-            id="support-status-filter"
-          >
-
-            <option value="">
-              All statuses
-            </option>
-
-            ${STATUS_OPTIONS
-              .map(
-                (status) => `
-                  <option
-                    value="${escapeAttribute(
-                      status
-                    )}"
-                    ${
-                      state.filters.filter ===
-                      status
-                        ? "selected"
-                        : ""
-                    }
-                  >
-                    ${escapeHtml(
-                      status
-                    )}
-                  </option>
-                `
-              )
-              .join("")}
-
-          </select>
-
-        </label>
-
-
-        <label class="ktms-form-field">
-
-          <span>
-            Case Type
-          </span>
-
-          <select
-            id="support-type-filter"
-          >
-
-            <option value="">
-              All types
-            </option>
-
-            ${TYPE_OPTIONS
-              .map(
-                (type) => `
-                  <option
-                    value="${escapeAttribute(
-                      type
-                    )}"
-                    ${
-                      state.filters.caseType ===
-                      type
-                        ? "selected"
-                        : ""
-                    }
-                  >
-                    ${escapeHtml(
-                      type
-                    )}
-                  </option>
-                `
-              )
-              .join("")}
-
-          </select>
-
-        </label>
-
-
-        <label class="ktms-form-field">
-
-          <span>
-            Category
-          </span>
-
-          <input
-            id="support-category-filter"
-            type="text"
-            placeholder="Category"
-            value="${escapeAttribute(
-              state.filters.caseCategory
-            )}"
-          />
-
-        </label>
-
-
-        <div class="ktms-support-filter-actions">
-
-          <button
-            id="support-apply-filters"
-            class="ktms-primary-button"
-            type="button"
-          >
-            APPLY
-          </button>
-
-          <button
-            id="support-reset-filters"
-            class="ktms-secondary-button"
-            type="button"
-          >
-            RESET
-          </button>
-
-        </div>
-
-      </div>
-
-    </div>
-  `;
-}
-
-
-function bindFilterEvents() {
-  document
-    .getElementById(
-      "support-apply-filters"
-    )
-    ?.addEventListener(
-      "click",
-      async () => {
-
-        state.filters.search =
-          document
-            .getElementById(
-              "support-search"
-            )
-            ?.value
-            .trim() || "";
-
-        state.filters.filter =
-          document
-            .getElementById(
-              "support-status-filter"
-            )
-            ?.value || "";
-
-        state.filters.caseType =
-          document
-            .getElementById(
-              "support-type-filter"
-            )
-            ?.value || "";
-
-        state.filters.caseCategory =
-          document
-            .getElementById(
-              "support-category-filter"
-            )
-            ?.value
-            .trim() || "";
-
-        await loadCases();
-      }
-    );
-
+    ?.addEventListener("click", async () => {
+      await refreshSupport();
+    });
 
   document
-    .getElementById(
-      "support-reset-filters"
-    )
-    ?.addEventListener(
-      "click",
-      async () => {
+    .getElementById("support-filter")
+    ?.addEventListener("change", async (event) => {
+      state.filters.filter = event.target.value;
+      await loadCases();
+    });
 
-        state.filters = {
-          filter: "",
-          caseType: "",
-          caseCategory: "",
-          search: ""
-        };
+  document
+    .getElementById("support-case-type")
+    ?.addEventListener("change", async (event) => {
+      state.filters.caseType = event.target.value;
+      await loadCases();
+    });
 
-        await loadCases();
-      }
-    );
+  document
+    .getElementById("support-case-category")
+    ?.addEventListener("change", async (event) => {
+      state.filters.caseCategory = event.target.value;
+      await loadCases();
+    });
+
+  const search =
+    document.getElementById("support-search");
+
+  search?.addEventListener("input", debounce(async () => {
+    state.filters.search =
+      search.value.trim();
+
+    await loadCases();
+  }, 350));
+
+  document
+    .getElementById("support-case-list")
+    ?.addEventListener("click", async (event) => {
+      const row =
+        event.target.closest("[data-support-case-id]");
+
+      if (!row) return;
+
+      const caseId =
+        row.dataset.supportCaseId;
+
+      if (!caseId) return;
+
+      await loadCase(caseId);
+    });
+
+  document
+    .getElementById("support-case-detail")
+    ?.addEventListener("click", async (event) => {
+      const button =
+        event.target.closest("[data-support-action]");
+
+      if (!button) return;
+
+      const action =
+        button.dataset.supportAction;
+
+      await handleCaseAction(action);
+    });
 }
 
 
@@ -455,179 +248,191 @@ function bindFilterEvents() {
    CASE LIST
    ========================================================= */
 
-function renderCaseList() {
-  if (!state.cases.length) {
-    return `
-      <div class="ktms-empty-state">
+async function loadCases() {
+  if (state.loadingList) return;
 
-        <h3>
-          No support cases
-        </h3>
+  state.loadingList = true;
+  state.error = "";
+
+  const list =
+    document.getElementById("support-case-list");
+
+  if (list) {
+    list.innerHTML =
+      renderListLoading();
+  }
+
+  try {
+    const result =
+      await getSupportCases({
+        filter: state.filters.filter,
+        caseType: state.filters.caseType,
+        caseCategory: state.filters.caseCategory,
+        search: state.filters.search
+      });
+
+    state.cases =
+      Array.isArray(result)
+        ? result
+        : Array.isArray(result?.cases)
+          ? result.cases
+          : [];
+
+    renderCaseList();
+
+    updateCaseCount();
+
+    updateCategoryOptions();
+
+    /*
+     * Keep the currently selected case if it still
+     * exists in the refreshed queue.
+     */
+    if (state.selectedCaseId) {
+      const stillExists =
+        state.cases.some(
+          item =>
+            getCaseId(item) ===
+            state.selectedCaseId
+        );
+
+      if (!stillExists) {
+        state.selectedCaseId = null;
+        state.selectedCase = null;
+
+        renderDetail();
+      }
+    }
+
+  } catch (error) {
+    state.error =
+      error?.message ||
+      "Unable to load support cases.";
+
+    if (list) {
+      list.innerHTML =
+        renderListError(state.error);
+    }
+
+    showFeedback(
+      state.error,
+      "error"
+    );
+
+  } finally {
+    state.loadingList = false;
+  }
+}
+
+
+function renderCaseList() {
+  const list =
+    document.getElementById("support-case-list");
+
+  if (!list) return;
+
+  if (!state.cases.length) {
+    list.innerHTML = `
+      <div class="ktms-support-no-cases">
+
+        <div class="ktms-support-no-cases-icon">
+          —
+        </div>
+
+        <strong>No support cases</strong>
 
         <p>
-          No cases match the current filters.
+          No cases match the current queue filters.
         </p>
 
       </div>
     `;
+
+    return;
   }
 
-
-  return `
-    <div class="ktms-card">
-
-      <div class="ktms-support-list-header">
-
-        <h3>
-          Cases
-        </h3>
-
-        <span>
-          ${state.cases.length}
-        </span>
-
-      </div>
-
-
-      <div class="ktms-table-wrapper">
-
-        <table class="ktms-table">
-
-          <thead>
-
-            <tr>
-              <th>Case</th>
-              <th>Player</th>
-              <th>Type</th>
-              <th>Status</th>
-              <th>Modified</th>
-            </tr>
-
-          </thead>
-
-          <tbody>
-
-            ${state.cases
-              .map(
-                (item) => `
-                  <tr
-                    class="ktms-support-case-row ${
-                      state.selectedCase?.caseId ===
-                      item.caseId
-                        ? "active"
-                        : ""
-                    }"
-                    data-support-case-id="${escapeAttribute(
-                      item.caseId
-                    )}"
-                  >
-
-                    <td>
-
-                      <strong>
-                        ${escapeHtml(
-                          item.caseId ||
-                          "—"
-                        )}
-                      </strong>
-
-                      <div class="ktms-support-row-subtext">
-                        ${escapeHtml(
-                          item.subject ||
-                          "No subject"
-                        )}
-                      </div>
-
-                    </td>
-
-
-                    <td>
-
-                      ${escapeHtml(
-                        item.playerName ||
-                        "—"
-                      )}
-
-                      <div class="ktms-support-row-subtext">
-                        ${escapeHtml(
-                          item.playerId ||
-                          ""
-                        )}
-                      </div>
-
-                    </td>
-
-
-                    <td>
-                      ${escapeHtml(
-                        item.caseType ||
-                        "—"
-                      )}
-                    </td>
-
-
-                    <td>
-                      ${statusBadge(
-                        item.status
-                      )}
-                    </td>
-
-
-                    <td>
-                      ${formatDate(
-                        item.lastModifiedDateTime
-                      )}
-                    </td>
-
-                  </tr>
-                `
-              )
-              .join("")}
-
-          </tbody>
-
-        </table>
-
-      </div>
-
-    </div>
-  `;
+  list.innerHTML =
+    state.cases
+      .map((supportCase) =>
+        renderCaseRow(supportCase)
+      )
+      .join("");
 }
 
 
-function bindCaseSelectionEvents() {
-  document
-    .querySelectorAll(
-      "[data-support-case-id]"
-    )
-    .forEach(
-      (row) => {
+function renderCaseRow(supportCase) {
+  const caseId =
+    getCaseId(supportCase);
 
-        row.addEventListener(
-          "click",
-          async () => {
+  const status =
+    getCaseStatus(supportCase);
 
-            if (
-              state.selectedCaseLoading
-            ) {
-              return;
-            }
+  const subject =
+    getCaseSubject(supportCase);
 
-            const caseId =
-              row.dataset.supportCaseId;
+  const player =
+    getCasePlayer(supportCase);
 
-            if (!caseId) {
-              return;
-            }
+  const tournament =
+    getCaseTournament(supportCase);
 
-            await loadCase(
-              caseId
-            );
-          }
-        );
+  const modified =
+    getCaseModified(supportCase);
 
-      }
-    );
+  const selected =
+    state.selectedCaseId === caseId;
+
+  return `
+    <button
+      type="button"
+      class="
+        ktms-support-case-row
+        ${selected ? "is-selected" : ""}
+      "
+      data-support-case-id="${escapeAttribute(caseId)}"
+    >
+
+      <div class="ktms-support-case-row-top">
+
+        <span class="ktms-support-case-id">
+          ${escapeHtml(caseId || "UNKNOWN")}
+        </span>
+
+        ${renderStatus(status)}
+
+      </div>
+
+      <strong class="ktms-support-case-subject">
+        ${escapeHtml(subject || "Support case")}
+      </strong>
+
+      <div class="ktms-support-case-context">
+
+        <span>
+          ${escapeHtml(player || "Player unavailable")}
+        </span>
+
+        ${
+          tournament
+            ? `
+              <span class="ktms-support-context-separator">
+                /
+              </span>
+              <span>
+                ${escapeHtml(tournament)}
+              </span>
+            `
+            : ""
+        }
+
+      </div>
+
+      <div class="ktms-support-case-modified">
+        ${formatDate(modified)}
+      </div>
+
+    </button>
+  `;
 }
 
 
@@ -635,207 +440,247 @@ function bindCaseSelectionEvents() {
    CASE DETAIL
    ========================================================= */
 
-function renderCaseDetail() {
-  if (!state.selectedCase) {
-    return `
-      <div
-        class="ktms-card ktms-support-empty-detail"
-      >
+async function loadCase(caseId) {
+  if (state.loadingDetail) return;
 
-        <h3>
-          Select a case
-        </h3>
+  state.selectedCaseId =
+    String(caseId);
 
-        <p>
-          Select a support case from the list
-          to inspect its history and available
-          operations.
-        </p>
+  state.loadingDetail = true;
 
-      </div>
-    `;
+  renderCaseList();
+
+  const detail =
+    document.getElementById(
+      "support-case-detail"
+    );
+
+  if (detail) {
+    detail.innerHTML =
+      renderDetailLoading();
   }
 
+  try {
+    const result =
+      await getSupportCase(caseId);
 
-  const item =
+    state.selectedCase =
+      result?.case ||
+      result?.supportCase ||
+      result ||
+      null;
+
+    renderDetail();
+
+  } catch (error) {
+    state.selectedCase = null;
+
+    if (detail) {
+      detail.innerHTML =
+        renderDetailError(
+          error?.message ||
+          "Unable to load support case."
+        );
+    }
+
+    showFeedback(
+      error?.message ||
+      "Unable to load support case.",
+      "error"
+    );
+
+  } finally {
+    state.loadingDetail = false;
+  }
+}
+
+
+function renderDetail() {
+  const detail =
+    document.getElementById(
+      "support-case-detail"
+    );
+
+  if (!detail) return;
+
+  if (!state.selectedCase) {
+    detail.innerHTML =
+      renderEmptyDetail();
+
+    return;
+  }
+
+  const supportCase =
     state.selectedCase;
 
-  return `
-    <div class="ktms-support-detail">
+  const status =
+    getCaseStatus(supportCase);
 
-      ${renderCaseHeader(item)}
+  detail.innerHTML = `
+    <div class="ktms-support-detail-inner">
 
-      ${renderCaseContext(item)}
+      ${renderDetailHeader(supportCase)}
 
-      ${renderPlayerDescription(item)}
+      ${renderCaseMeta(supportCase)}
 
-      ${renderMessages(item)}
+      ${renderDescription(supportCase)}
 
-      ${renderEvidence(item)}
+      ${renderConversation(supportCase)}
 
-      ${renderTimeline(item)}
+      ${renderEvidence(supportCase)}
 
-      ${renderResolution(item)}
+      ${renderTimeline(supportCase)}
 
-      ${renderActions(item)}
+      ${renderResolution(supportCase)}
 
-    </div>
-  `;
-}
-
-
-function renderCaseHeader(item) {
-  return `
-    <div class="ktms-card">
-
-      <div class="ktms-support-detail-header">
-
-        <div>
-
-          <div class="ktms-support-case-id">
-            ${escapeHtml(
-              item.caseId ||
-              "—"
-            )}
-          </div>
-
-          <h3>
-            ${escapeHtml(
-              item.subject ||
-              "Support Case"
-            )}
-          </h3>
-
-        </div>
-
-        <div>
-          ${statusBadge(
-            item.status
-          )}
-        </div>
-
-      </div>
-
-
-      <div class="ktms-support-meta-grid">
-
-        ${metaItem(
-          "Case Type",
-          item.caseType
-        )}
-
-        ${metaItem(
-          "Category",
-          item.caseCategory
-        )}
-
-        ${metaItem(
-          "Created",
-          formatDate(
-            item.createdDateTime
-          )
-        )}
-
-        ${metaItem(
-          "Last Modified",
-          formatDate(
-            item.lastModifiedDateTime
-          )
-        )}
-
-      </div>
+      ${renderActions(supportCase, status)}
 
     </div>
   `;
 }
 
 
-function renderCaseContext(item) {
+function renderDetailHeader(supportCase) {
+  const caseId =
+    getCaseId(supportCase);
+
+  const subject =
+    getCaseSubject(supportCase);
+
+  const status =
+    getCaseStatus(supportCase);
+
+  const caseType =
+    getCaseType(supportCase);
+
+  const category =
+    getCaseCategory(supportCase);
+
   return `
-    <div class="ktms-card">
+    <header class="ktms-support-detail-header">
 
-      <div class="ktms-section-header">
+      <div>
 
-        <div>
-          <h3>
-            Case Context
-          </h3>
+        <div class="ktms-support-detail-kicker">
+          ${escapeHtml(caseType || "SUPPORT CASE")}
+        </div>
+
+        <h2>
+          ${escapeHtml(subject || "Support Case")}
+        </h2>
+
+        <div class="ktms-support-detail-id">
+          ${escapeHtml(caseId)}
         </div>
 
       </div>
 
+      <div class="ktms-support-detail-status">
 
-      <div class="ktms-support-meta-grid">
+        ${renderStatus(status)}
 
-        ${metaItem(
-          "Player",
-          item.playerName
-            ? `${item.playerName} (${
-                item.playerId ||
-                "—"
-              })`
-            : item.playerId
-        )}
-
-        ${metaItem(
-          "Player Email",
-          item.playerEmail
-        )}
-
-        ${metaItem(
-          "Tournament",
-          item.tournamentId
-        )}
-
-        ${metaItem(
-          "Registration",
-          item.registrationReferenceId ||
-          item.registrationId
-        )}
-
-        ${metaItem(
-          "Fixture",
-          item.fixtureId
-        )}
-
-        ${metaItem(
-          "Match Code",
-          item.matchCode
-        )}
-
-        ${metaItem(
-          "Transaction",
-          item.transactionHistoryId
-        )}
-
-      </div>
-
-    </div>
-  `;
-}
-
-
-function renderPlayerDescription(item) {
-  return `
-    <div class="ktms-card">
-
-      <div class="ktms-section-header">
-
-        <h3>
-          Player Description
-        </h3>
-
-      </div>
-
-      <div class="ktms-support-description">
         ${
-          item.playerDescription
-            ? escapeHtml(
-                item.playerDescription
-              )
-            : "No description provided."
+          category
+            ? `
+              <span class="ktms-support-category">
+                ${escapeHtml(category)}
+              </span>
+            `
+            : ""
         }
+
       </div>
+
+    </header>
+  `;
+}
+
+
+/* =========================================================
+   META
+   ========================================================= */
+
+function renderCaseMeta(supportCase) {
+  const player =
+    getCasePlayer(supportCase);
+
+  const tournament =
+    getCaseTournament(supportCase);
+
+  const registration =
+    getField(
+      supportCase,
+      [
+        "registrationId",
+        "registration_id"
+      ]
+    );
+
+  const fixture =
+    getField(
+      supportCase,
+      [
+        "fixtureId",
+        "fixture_id"
+      ]
+    );
+
+  const payment =
+    getField(
+      supportCase,
+      [
+        "paymentId",
+        "payment_id",
+        "transactionId",
+        "transaction_id"
+      ]
+    );
+
+  const submitted =
+    getField(
+      supportCase,
+      [
+        "createdDateTime",
+        "created_datetime",
+        "createdAt",
+        "created_at"
+      ]
+    );
+
+  const modified =
+    getCaseModified(supportCase);
+
+  return `
+    <section class="ktms-support-meta-grid">
+
+      ${metaItem("Player", player)}
+
+      ${metaItem("Tournament", tournament)}
+
+      ${metaItem("Registration", registration)}
+
+      ${metaItem("Fixture", fixture)}
+
+      ${metaItem("Payment", payment)}
+
+      ${metaItem("Submitted", formatDate(submitted))}
+
+      ${metaItem("Last modified", formatDate(modified))}
+
+    </section>
+  `;
+}
+
+
+function metaItem(label, value) {
+  return `
+    <div class="ktms-support-meta-item">
+
+      <span>${escapeHtml(label)}</span>
+
+      <strong>
+        ${escapeHtml(value || "—")}
+      </strong>
 
     </div>
   `;
@@ -843,127 +688,166 @@ function renderPlayerDescription(item) {
 
 
 /* =========================================================
-   MESSAGES
+   DESCRIPTION
    ========================================================= */
 
-function renderMessages(item) {
-  const messages =
-    array(item.messages);
+function renderDescription(supportCase) {
+  const description =
+    getField(
+      supportCase,
+      [
+        "description",
+        "caseDescription"
+      ]
+    );
+
+  if (!description) return "";
 
   return `
-    <div class="ktms-card">
+    <section class="ktms-support-section">
 
-      <div class="ktms-section-header">
+      <div class="ktms-support-section-heading">
+        <span>CASE DESCRIPTION</span>
+      </div>
 
-        <div>
+      <div class="ktms-support-description">
+        ${formatMultiline(description)}
+      </div>
 
-          <h3>
-            Communication
-          </h3>
+    </section>
+  `;
+}
 
-          <p>
-            Permanent case communication history.
-          </p>
 
-        </div>
+/* =========================================================
+   CONVERSATION
+   ========================================================= */
+
+function renderConversation(supportCase) {
+  const messages =
+    getArray(
+      supportCase,
+      [
+        "messages",
+        "caseMessages",
+        "supportMessages"
+      ]
+    );
+
+  return `
+    <section class="ktms-support-section">
+
+      <div class="ktms-support-section-heading">
+
+        <span>CONVERSATION</span>
+
+        <span class="ktms-support-section-count">
+          ${messages.length}
+        </span>
 
       </div>
 
-
       ${
-        !messages.length
+        messages.length
           ? `
-            <div class="ktms-empty-state">
-              No messages recorded.
+            <div class="ktms-support-message-list">
+              ${messages
+                .map(renderMessage)
+                .join("")}
             </div>
           `
           : `
-            <div class="ktms-support-message-list">
-
-              ${messages
-                .map(
-                  (message) => `
-                    <div class="ktms-support-message">
-
-                      <div class="ktms-support-message-header">
-
-                        <strong>
-                          ${escapeHtml(
-                            message.senderType ||
-                            "Unknown"
-                          )}
-                        </strong>
-
-                        <span>
-                          ${formatDate(
-                            message.createdDateTime
-                          )}
-                        </span>
-
-                      </div>
-
-                      <div class="ktms-support-message-body">
-                        ${escapeHtml(
-                          message.message ||
-                          ""
-                        )}
-                      </div>
-
-                    </div>
-                  `
-                )
-                .join("")}
-
+            <div class="ktms-support-section-empty">
+              No messages recorded for this case.
             </div>
           `
       }
 
+    </section>
+  `;
+}
 
-      ${
-        canManageSupport()
-          ? `
-            <div class="ktms-support-response-box">
 
-              <label class="ktms-form-field">
+function renderMessage(message) {
+  const body =
+    getField(
+      message,
+      [
+        "messageBody",
+        "message_body",
+        "body",
+        "message"
+      ]
+    );
 
+  const sender =
+    getField(
+      message,
+      [
+        "senderName",
+        "sender_name",
+        "createdByName",
+        "created_by_name",
+        "sender"
+      ]
+    );
+
+  const senderType =
+    getField(
+      message,
+      [
+        "senderType",
+        "sender_type",
+        "authorType",
+        "author_type"
+      ]
+    );
+
+  const created =
+    getField(
+      message,
+      [
+        "createdDateTime",
+        "created_datetime",
+        "createdAt",
+        "created_at"
+      ]
+    );
+
+  return `
+    <article class="ktms-support-message">
+
+      <div class="ktms-support-message-header">
+
+        <div>
+
+          <strong>
+            ${escapeHtml(sender || "KTMS")}
+          </strong>
+
+          ${
+            senderType
+              ? `
                 <span>
-                  Add response
+                  ${escapeHtml(senderType)}
                 </span>
+              `
+              : ""
+          }
 
-                <textarea
-                  id="support-response-message"
-                  rows="4"
-                  placeholder="Write a response to the case..."
-                ></textarea>
+        </div>
 
-              </label>
+        <time>
+          ${formatDate(created)}
+        </time>
 
-              <div class="ktms-support-response-actions">
+      </div>
 
-                <button
-                  id="support-respond"
-                  class="ktms-primary-button"
-                  type="button"
-                >
-                  RESPOND
-                </button>
+      <div class="ktms-support-message-body">
+        ${formatMultiline(body)}
+      </div>
 
-                <button
-                  id="support-request-information"
-                  class="ktms-secondary-button"
-                  type="button"
-                >
-                  REQUEST INFORMATION
-                </button>
-
-              </div>
-
-            </div>
-          `
-          : ""
-      }
-
-    </div>
+    </article>
   `;
 }
 
@@ -972,86 +856,113 @@ function renderMessages(item) {
    EVIDENCE
    ========================================================= */
 
-function renderEvidence(item) {
+function renderEvidence(supportCase) {
   const evidence =
-    array(item.evidence);
+    getArray(
+      supportCase,
+      [
+        "evidence",
+        "caseEvidence"
+      ]
+    );
+
+  if (!evidence.length) return "";
 
   return `
-    <div class="ktms-card">
+    <section class="ktms-support-section">
 
-      <div class="ktms-section-header">
+      <div class="ktms-support-section-heading">
+        <span>EVIDENCE</span>
 
-        <div>
+        <span class="ktms-support-section-count">
+          ${evidence.length}
+        </span>
+      </div>
 
-          <h3>
-            Evidence
-          </h3>
+      <div class="ktms-support-evidence-list">
 
-          <p>
-            Evidence associated with this case.
-          </p>
-
-        </div>
+        ${evidence
+          .map(renderEvidenceItem)
+          .join("")}
 
       </div>
 
+    </section>
+  `;
+}
+
+
+function renderEvidenceItem(item) {
+  const name =
+    getField(
+      item,
+      [
+        "fileName",
+        "file_name",
+        "name",
+        "title"
+      ]
+    ) || "Evidence";
+
+  const url =
+    getField(
+      item,
+      [
+        "fileUrl",
+        "file_url",
+        "url",
+        "evidenceUrl",
+        "evidence_url"
+      ]
+    );
+
+  const type =
+    getField(
+      item,
+      [
+        "fileType",
+        "file_type",
+        "mimeType",
+        "mime_type"
+      ]
+    );
+
+  return `
+    <div class="ktms-support-evidence">
+
+      <div>
+
+        <strong>
+          ${escapeHtml(name)}
+        </strong>
+
+        ${
+          type
+            ? `
+              <span>
+                ${escapeHtml(type)}
+              </span>
+            `
+            : ""
+        }
+
+      </div>
 
       ${
-        !evidence.length
+        url
           ? `
-            <div class="ktms-empty-state">
-              No evidence attached.
-            </div>
+            <a
+              href="${escapeAttribute(url)}"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              VIEW
+            </a>
           `
           : `
-            <div class="ktms-support-evidence-list">
-
-              ${evidence
-                .map(
-                  (item) => `
-                    <div class="ktms-support-evidence">
-
-                      <div>
-
-                        <strong>
-                          ${escapeHtml(
-                            item.fileName ||
-                            item.evidenceType ||
-                            "Evidence"
-                          )}
-                        </strong>
-
-                        <div class="ktms-support-row-subtext">
-                          ${escapeHtml(
-                            item.evidenceType ||
-                            ""
-                          )}
-                        </div>
-
-                      </div>
-
-                      ${
-                        item.evidenceUrl
-                          ? `
-                            <a
-                              href="${escapeAttribute(
-                                item.evidenceUrl
-                              )}"
-                              target="_blank"
-                              rel="noopener noreferrer"
-                            >
-                              VIEW
-                            </a>
-                          `
-                          : ""
-                      }
-
-                    </div>
-                  `
-                )
-                .join("")}
-
-            </div>
+            <span class="ktms-support-no-link">
+              NO LINK
+            </span>
           `
       }
 
@@ -1064,71 +975,105 @@ function renderEvidence(item) {
    TIMELINE
    ========================================================= */
 
-function renderTimeline(item) {
-  const timeline =
-    array(item.timeline);
+function renderTimeline(supportCase) {
+  const events =
+    getArray(
+      supportCase,
+      [
+        "timeline",
+        "events",
+        "caseEvents"
+      ]
+    );
+
+  if (!events.length) return "";
 
   return `
-    <div class="ktms-card">
+    <section class="ktms-support-section">
 
-      <div class="ktms-section-header">
+      <div class="ktms-support-section-heading">
+        <span>CASE TIMELINE</span>
 
-        <h3>
-          Timeline
-        </h3>
+        <span class="ktms-support-section-count">
+          ${events.length}
+        </span>
+      </div>
+
+      <div class="ktms-support-timeline">
+
+        ${events
+          .map(renderTimelineEvent)
+          .join("")}
 
       </div>
 
+    </section>
+  `;
+}
 
-      ${
-        !timeline.length
-          ? `
-            <div class="ktms-empty-state">
-              No timeline events recorded.
-            </div>
-          `
-          : `
-            <div class="ktms-support-timeline">
 
-              ${timeline
-                .map(
-                  (event) => `
-                    <div class="ktms-support-timeline-item">
+function renderTimelineEvent(event) {
+  const action =
+    getField(
+      event,
+      [
+        "eventType",
+        "event_type",
+        "action",
+        "actionType",
+        "action_type",
+        "description"
+      ]
+    ) || "Case event";
 
-                      <div class="ktms-support-timeline-marker"></div>
+  const actor =
+    getField(
+      event,
+      [
+        "performedByName",
+        "performed_by_name",
+        "adminName",
+        "admin_name",
+        "actorName",
+        "actor_name"
+      ]
+    );
 
-                      <div>
+  const timestamp =
+    getField(
+      event,
+      [
+        "createdDateTime",
+        "created_datetime",
+        "createdAt",
+        "created_at"
+      ]
+    );
 
-                        <strong>
-                          ${escapeHtml(
-                            event.eventType ||
-                            "Event"
-                          )}
-                        </strong>
+  return `
+    <div class="ktms-support-timeline-item">
 
-                        <div>
-                          ${escapeHtml(
-                            event.eventSummary ||
-                            ""
-                          )}
-                        </div>
+      <div class="ktms-support-timeline-marker"></div>
 
-                        <span>
-                          ${formatDate(
-                            event.createdDateTime
-                          )}
-                        </span>
+      <div class="ktms-support-timeline-content">
 
-                      </div>
+        <strong>
+          ${escapeHtml(action)}
+        </strong>
 
-                    </div>
-                  `
-                )
-                .join("")}
+        <div>
+          ${
+            actor
+              ? escapeHtml(actor)
+              : "System"
+          }
+        </div>
 
-            </div>
-          `
-      }
+        <time>
+          ${formatDate(timestamp)}
+        </time>
+
+      </div>
 
     </div>
   `;
@@ -1139,71 +1084,87 @@ function renderTimeline(item) {
    RESOLUTION
    ========================================================= */
 
-function renderResolution(item) {
-  const hasResolution =
-    item.resolution ||
-    item.resolutionExplanation ||
-    item.resolutionDateTime;
+function renderResolution(supportCase) {
+  const resolution =
+    getField(
+      supportCase,
+      [
+        "resolution"
+      ]
+    );
 
-  if (!hasResolution) {
+  const explanation =
+    getField(
+      supportCase,
+      [
+        "resolutionExplanation",
+        "resolution_explanation"
+      ]
+    );
+
+  const resolvedBy =
+    getField(
+      supportCase,
+      [
+        "resolvedByName",
+        "resolved_by_name",
+        "resolvingAdminName",
+        "resolving_admin_name"
+      ]
+    );
+
+  if (!resolution && !explanation) {
     return "";
   }
 
   return `
-    <div class="ktms-card">
+    <section class="ktms-support-section">
 
-      <div class="ktms-section-header">
+      <div class="ktms-support-section-heading">
+        <span>RESOLUTION</span>
+      </div>
 
-        <h3>
-          Resolution
-        </h3>
+      <div class="ktms-support-resolution">
+
+        ${
+          resolution
+            ? `
+              <div class="ktms-support-resolution-row">
+                <span>Decision</span>
+                <strong>
+                  ${escapeHtml(resolution)}
+                </strong>
+              </div>
+            `
+            : ""
+        }
+
+        ${
+          resolvedBy
+            ? `
+              <div class="ktms-support-resolution-row">
+                <span>Resolved by</span>
+                <strong>
+                  ${escapeHtml(resolvedBy)}
+                </strong>
+              </div>
+            `
+            : ""
+        }
+
+        ${
+          explanation
+            ? `
+              <div class="ktms-support-resolution-explanation">
+                ${formatMultiline(explanation)}
+              </div>
+            `
+            : ""
+        }
 
       </div>
 
-
-      <div class="ktms-support-meta-grid">
-
-        ${metaItem(
-          "Resolution",
-          item.resolution
-        )}
-
-        ${metaItem(
-          "Resolved",
-          formatDate(
-            item.resolutionDateTime
-          )
-        )}
-
-        ${metaItem(
-          "Resolving Administrator",
-          item.resolvingAdminId
-        )}
-
-      </div>
-
-
-      ${
-        item.resolutionExplanation
-          ? `
-            <div class="ktms-support-resolution-text">
-
-              <strong>
-                Explanation
-              </strong>
-
-              <p>
-                ${escapeHtml(
-                  item.resolutionExplanation
-                )}
-              </p>
-
-            </div>
-          `
-          : ""
-      }
-
-    </div>
+    </section>
   `;
 }
 
@@ -1212,85 +1173,98 @@ function renderResolution(item) {
    ACTIONS
    ========================================================= */
 
-function renderActions(item) {
-  if (!canManageSupport()) {
+function renderActions(supportCase, status) {
+  const canManage =
+    canManageSupport();
+
+  if (!canManage) {
     return `
-      <div class="ktms-card">
-
-        <div class="ktms-message">
-          You have read-only access to Support cases.
-        </div>
-
-      </div>
+      <section class="ktms-support-action-notice">
+        <strong>Read-only access</strong>
+        <span>
+          Your administrator role can view this case but
+          cannot modify it.
+        </span>
+      </section>
     `;
   }
 
+  const isClosed =
+    status === "Closed";
 
-  const status =
-    item.status;
+  const isResolved =
+    status === "Resolved";
 
+  const isRejected =
+    status === "Rejected";
+
+  const canRespond =
+    !isClosed &&
+    !isResolved &&
+    !isRejected;
+
+  const canRequestInfo =
+    canRespond;
 
   const canResolve =
-    ![
-      "Resolved",
-      "Rejected",
-      "Closed"
-    ].includes(status);
-
+    canRespond;
 
   const canReject =
-    ![
-      "Resolved",
-      "Rejected",
-      "Closed"
-    ].includes(status);
-
+    canRespond;
 
   const canClose =
-    [
-      "Resolved",
-      "Rejected"
-    ].includes(status);
-
+    isResolved ||
+    isRejected;
 
   const canReopen =
-    [
-      "Resolved",
-      "Rejected",
-      "Closed"
-    ].includes(status);
-
+    isResolved ||
+    isRejected ||
+    isClosed;
 
   return `
-    <div class="ktms-card">
+    <section class="ktms-support-actions">
 
-      <div class="ktms-section-header">
-
-        <div>
-
-          <h3>
-            Case Actions
-          </h3>
-
-          <p>
-            Business-domain decisions remain
-            owned by their respective KTMS services.
-          </p>
-
-        </div>
-
+      <div class="ktms-support-section-heading">
+        <span>CASE ACTIONS</span>
       </div>
 
-
       <div class="ktms-support-action-grid">
+
+        ${
+          canRespond
+            ? `
+              <button
+                type="button"
+                class="ktms-secondary-button"
+                data-support-action="respond"
+              >
+                RESPOND
+              </button>
+            `
+            : ""
+        }
+
+        ${
+          canRequestInfo
+            ? `
+              <button
+                type="button"
+                class="ktms-secondary-button"
+                data-support-action="request_information"
+              >
+                REQUEST INFORMATION
+              </button>
+            `
+            : ""
+        }
 
         ${
           canResolve
             ? `
               <button
-                id="support-resolve"
-                class="ktms-primary-button"
                 type="button"
+                class="ktms-primary-button"
+                data-support-action="resolve"
               >
                 RESOLVE
               </button>
@@ -1298,14 +1272,13 @@ function renderActions(item) {
             : ""
         }
 
-
         ${
           canReject
             ? `
               <button
-                id="support-reject"
-                class="ktms-danger-button"
                 type="button"
+                class="ktms-danger-button"
+                data-support-action="reject"
               >
                 REJECT
               </button>
@@ -1313,14 +1286,13 @@ function renderActions(item) {
             : ""
         }
 
-
         ${
           canClose
             ? `
               <button
-                id="support-close"
-                class="ktms-secondary-button"
                 type="button"
+                class="ktms-secondary-button"
+                data-support-action="close"
               >
                 CLOSE
               </button>
@@ -1328,14 +1300,13 @@ function renderActions(item) {
             : ""
         }
 
-
         ${
           canReopen
             ? `
               <button
-                id="support-reopen"
-                class="ktms-secondary-button"
                 type="button"
+                class="ktms-secondary-button"
+                data-support-action="reopen"
               >
                 REOPEN
               </button>
@@ -1345,164 +1316,218 @@ function renderActions(item) {
 
       </div>
 
-    </div>
+    </section>
   `;
 }
 
 
-function bindDetailEvents() {
-  document
-    .getElementById(
-      "support-respond"
-    )
-    ?.addEventListener(
-      "click",
-      () => performResponse(
-        "respond"
-      )
-    );
-
-
-  document
-    .getElementById(
-      "support-request-information"
-    )
-    ?.addEventListener(
-      "click",
-      () =>
-        performResponse(
-          "requestInformation"
-        )
-    );
-
-
-  document
-    .getElementById(
-      "support-resolve"
-    )
-    ?.addEventListener(
-      "click",
-      () =>
-        performDecision(
-          "resolve"
-        )
-    );
-
-
-  document
-    .getElementById(
-      "support-reject"
-    )
-    ?.addEventListener(
-      "click",
-      () =>
-        performDecision(
-          "reject"
-        )
-    );
-
-
-  document
-    .getElementById(
-      "support-close"
-    )
-    ?.addEventListener(
-      "click",
-      () =>
-        performClose()
-    );
-
-
-  document
-    .getElementById(
-      "support-reopen"
-    )
-    ?.addEventListener(
-      "click",
-      () =>
-        performReopen()
-    );
-}
-
-
 /* =========================================================
-   ACTION HANDLERS
+   ACTION HANDLING
    ========================================================= */
 
-async function performResponse(action) {
+async function handleCaseAction(action) {
   if (
-    !state.selectedCase ||
-    state.actionLoading
+    state.actionLoading ||
+    !state.selectedCaseId
   ) {
     return;
   }
 
+  const caseId =
+    state.selectedCaseId;
 
-  const message =
-    document
-      .getElementById(
-        "support-response-message"
-      )
-      ?.value
-      .trim();
+  if (
+    action === "respond" ||
+    action === "request_information"
+  ) {
+    const message =
+      window.prompt(
+        action === "respond"
+          ? "Enter your response:"
+          : "Enter the information request:"
+      );
 
+    if (message === null) return;
 
-  if (!message) {
-    setMessage(
-      "Enter a message before continuing.",
-      "error"
+    const trimmed =
+      message.trim();
+
+    if (!trimmed) {
+      showFeedback(
+        "A message is required.",
+        "error"
+      );
+
+      return;
+    }
+
+    if (trimmed.length > 10000) {
+      showFeedback(
+        "Message cannot exceed 10,000 characters.",
+        "error"
+      );
+
+      return;
+    }
+
+    await performAction(
+      action,
+      async () => {
+        if (action === "respond") {
+          return respondToSupportCase(
+            caseId,
+            trimmed
+          );
+        }
+
+        return requestSupportInformation(
+          caseId,
+          trimmed
+        );
+      }
     );
 
     return;
   }
 
 
-  try {
-    state.actionLoading = true;
-
-    setMessage(
-      action === "respond"
-        ? "Sending response..."
-        : "Requesting information...",
-      "info"
-    );
-
-
-    if (action === "respond") {
-
-      await respondToSupportCase(
-        state.selectedCase.caseId,
-        message
+  if (
+    action === "resolve" ||
+    action === "reject"
+  ) {
+    const resolution =
+      window.prompt(
+        action === "resolve"
+          ? "Enter the resolution:"
+          : "Enter the rejection resolution:"
       );
 
-    } else {
+    if (resolution === null) return;
 
-      await requestSupportInformation(
-        state.selectedCase.caseId,
-        message
+    const explanation =
+      window.prompt(
+        "Enter the resolution explanation:"
       );
 
+    if (explanation === null) return;
+
+    const trimmedResolution =
+      resolution.trim();
+
+    const trimmedExplanation =
+      explanation.trim();
+
+    if (!trimmedResolution) {
+      showFeedback(
+        "A resolution is required.",
+        "error"
+      );
+
+      return;
     }
 
+    if (!trimmedExplanation) {
+      showFeedback(
+        "A resolution explanation is required.",
+        "error"
+      );
 
-    await refreshSelectedCase();
+      return;
+    }
+
+    if (trimmedExplanation.length > 10000) {
+      showFeedback(
+        "Resolution explanation cannot exceed 10,000 characters.",
+        "error"
+      );
+
+      return;
+    }
+
+    await performAction(
+      action,
+      async () => {
+        if (action === "resolve") {
+          return resolveSupportCase(
+            caseId,
+            trimmedResolution,
+            trimmedExplanation
+          );
+        }
+
+        return rejectSupportCase(
+          caseId,
+          trimmedResolution,
+          trimmedExplanation
+        );
+      }
+    );
+
+    return;
+  }
 
 
-    setMessage(
-      action === "respond"
-        ? "Response recorded."
-        : "Information request recorded.",
+  if (action === "close") {
+    const confirmed =
+      window.confirm(
+        "Close this support case?"
+      );
+
+    if (!confirmed) return;
+
+    await performAction(
+      action,
+      () => closeSupportCase(caseId)
+    );
+
+    return;
+  }
+
+
+  if (action === "reopen") {
+    const confirmed =
+      window.confirm(
+        "Reopen this support case?"
+      );
+
+    if (!confirmed) return;
+
+    await performAction(
+      action,
+      () => reopenSupportCase(caseId)
+    );
+  }
+}
+
+
+async function performAction(action, operation) {
+  state.actionLoading = true;
+
+  disableActionButtons(true);
+
+  try {
+    await operation();
+
+    showFeedback(
+      actionSuccessMessage(action),
       "success"
     );
 
+    /*
+     * Reload both queue and detail from the backend.
+     * The frontend never manufactures the new status,
+     * resolution or timeline.
+     */
+    await loadCases();
+
+    if (state.selectedCaseId) {
+      await loadCase(
+        state.selectedCaseId
+      );
+    }
+
   } catch (error) {
-
-    console.error(
-      "KTMS support response action failed:",
-      error
-    );
-
-    setMessage(
+    showFeedback(
       error?.message ||
       "Support action failed.",
       "error"
@@ -1510,416 +1535,484 @@ async function performResponse(action) {
 
   } finally {
     state.actionLoading = false;
+
+    disableActionButtons(false);
   }
 }
 
 
-async function performDecision(action) {
-  if (
-    !state.selectedCase ||
-    state.actionLoading
-  ) {
-    return;
-  }
-
-
-  const resolution =
-    window.prompt(
-      action === "resolve"
-        ? "Enter the resolution:"
-        : "Enter the rejection resolution:"
-    );
-
-
-  if (!resolution?.trim()) {
-    return;
-  }
-
-
-  const explanation =
-    window.prompt(
-      "Enter the resolution explanation:"
-    );
-
-
-  if (!explanation?.trim()) {
-    return;
-  }
-
-
-  try {
-    state.actionLoading = true;
-
-    setMessage(
-      action === "resolve"
-        ? "Resolving case..."
-        : "Rejecting case...",
-      "info"
-    );
-
-
-    if (action === "resolve") {
-
-      await resolveSupportCase(
-        state.selectedCase.caseId,
-        resolution.trim(),
-        explanation.trim()
-      );
-
-    } else {
-
-      await rejectSupportCase(
-        state.selectedCase.caseId,
-        resolution.trim(),
-        explanation.trim()
-      );
-
-    }
-
-
-    await refreshSelectedCase();
-    await refreshCaseListOnly();
-
-
-    setMessage(
-      action === "resolve"
-        ? "Case resolved."
-        : "Case rejected.",
-      "success"
-    );
-
-  } catch (error) {
-
-    console.error(
-      "KTMS support decision failed:",
-      error
-    );
-
-    setMessage(
-      error?.message ||
-      "Unable to update the case.",
-      "error"
-    );
-
-  } finally {
-    state.actionLoading = false;
-  }
-}
-
-
-async function performClose() {
-  if (
-    !state.selectedCase ||
-    state.actionLoading
-  ) {
-    return;
-  }
-
-
-  if (
-    !window.confirm(
-      "Close this support case?"
-    )
-  ) {
-    return;
-  }
-
-
-  try {
-    state.actionLoading = true;
-
-    setMessage(
-      "Closing case...",
-      "info"
-    );
-
-
-    await closeSupportCase(
-      state.selectedCase.caseId
-    );
-
-
-    await refreshSelectedCase();
-    await refreshCaseListOnly();
-
-
-    setMessage(
-      "Case closed.",
-      "success"
-    );
-
-  } catch (error) {
-
-    console.error(
-      "KTMS support close failed:",
-      error
-    );
-
-    setMessage(
-      error?.message ||
-      "Unable to close the case.",
-      "error"
-    );
-
-  } finally {
-    state.actionLoading = false;
-  }
-}
-
-
-async function performReopen() {
-  if (
-    !state.selectedCase ||
-    state.actionLoading
-  ) {
-    return;
-  }
-
-
-  const message =
-    window.prompt(
-      "Enter the reason for reopening this case:"
-    );
-
-
-  if (!message?.trim()) {
-    return;
-  }
-
-
-  try {
-    state.actionLoading = true;
-
-    setMessage(
-      "Reopening case...",
-      "info"
-    );
-
-
-    await reopenSupportCase(
-      state.selectedCase.caseId,
-      message.trim()
-    );
-
-
-    await refreshSelectedCase();
-    await refreshCaseListOnly();
-
-
-    setMessage(
-      "Case reopened.",
-      "success"
-    );
-
-  } catch (error) {
-
-    console.error(
-      "KTMS support reopen failed:",
-      error
-    );
-
-    setMessage(
-      error?.message ||
-      "Unable to reopen the case.",
-      "error"
-    );
-
-  } finally {
-    state.actionLoading = false;
-  }
-}
-
-
-/* =========================================================
-   DATA REFRESH
-   ========================================================= */
-
-async function loadCase(caseId) {
-  if (!caseId) {
-    return;
-  }
-
-  try {
-    state.selectedCaseLoading = true;
-
-    setMessage(
-      "Loading case...",
-      "info"
-    );
-
-
-    const result =
-      await getSupportCase(
-        caseId
-      );
-
-
-    state.selectedCase =
-      normalizeObject(result);
-
-
-    renderWorkspace();
-
-
-    setMessage(
-      "Case loaded.",
-      "success"
-    );
-
-  } catch (error) {
-
-    console.error(
-      "KTMS support case detail load failed:",
-      error
-    );
-
-    setMessage(
-      error?.message ||
-      "Unable to load case.",
-      "error"
-    );
-
-  } finally {
-    state.selectedCaseLoading = false;
-  }
-}
-
-
-async function refreshSelectedCase() {
-  if (
-    !state.selectedCase?.caseId
-  ) {
-    return;
-  }
-
-
-  const caseId =
-    state.selectedCase.caseId;
-
-
-  const result =
-    await getSupportCase(
-      caseId
-    );
-
-
-  state.selectedCase =
-    normalizeObject(result);
-
-
-  renderWorkspace();
-}
-
-
-async function refreshCaseListOnly() {
-  const result =
-    await getSupportCases(
-      state.filters
-    );
-
-
-  state.cases =
-    normalizeRows(result);
-
-
-  const list =
-    document.getElementById(
-      "support-case-list"
-    );
-
-
-  if (list) {
-
-    list.innerHTML =
-      renderCaseList();
-
-    bindCaseSelectionEvents();
-  }
-}
-
-
-/* =========================================================
-   PERMISSIONS
-   ========================================================= */
-
-function canManageSupport() {
-  return [
-    "Game Master",
-    "Support"
-  ].includes(
-    state.admin?.role
+function actionSuccessMessage(action) {
+  const messages = {
+    respond: "Response recorded.",
+    request_information:
+      "Information request recorded.",
+    resolve:
+      "Support case resolved.",
+    reject:
+      "Support case rejected.",
+    close:
+      "Support case closed.",
+    reopen:
+      "Support case reopened."
+  };
+
+  return (
+    messages[action] ||
+    "Support case updated."
   );
 }
 
 
 /* =========================================================
-   HELPERS
+   ROLE / PERMISSION PRESENTATION
    ========================================================= */
 
-function normalizeRows(value) {
-  if (Array.isArray(value)) {
-    return value;
-  }
+function canManageSupport() {
+  const role =
+    String(
+      state.admin?.role ||
+      ""
+    )
+      .trim()
+      .toLowerCase();
 
-
-  if (Array.isArray(value?.data)) {
-    return value.data;
-  }
-
-
-  if (Array.isArray(value?.rows)) {
-    return value.rows;
-  }
-
-
-  return [];
+  /*
+   * Backend remains authoritative.
+   *
+   * This is only UI presentation so Moderator does not
+   * receive management controls that it cannot use.
+   */
+  return (
+    role === "game master" ||
+    role === "support"
+  );
 }
 
 
-function normalizeObject(value) {
-  if (
-    value?.data &&
-    !Array.isArray(value.data)
-  ) {
-    return value.data;
+/* =========================================================
+   REFRESH
+   ========================================================= */
+
+async function refreshSupport() {
+  state.message = "";
+
+  await loadCases();
+
+  if (state.selectedCaseId) {
+    await loadCase(
+      state.selectedCaseId
+    );
   }
 
-
-  return value || {};
+  showFeedback(
+    "Support queue refreshed.",
+    "success"
+  );
 }
 
 
-function array(value) {
-  return Array.isArray(value)
-    ? value
-    : [];
-}
+/* =========================================================
+   LOADING / EMPTY / ERROR
+   ========================================================= */
 
-
-function metaItem(label, value) {
+function renderListLoading() {
   return `
-    <div class="ktms-support-meta-item">
+    <div class="ktms-support-loading">
 
-      <span>
-        ${escapeHtml(label)}
-      </span>
-
-      <strong>
-        ${escapeHtml(
-          value === null ||
-          value === undefined ||
-          value === ""
-            ? "—"
-            : value
-        )}
-      </strong>
+      <div class="ktms-support-loading-line"></div>
+      <div class="ktms-support-loading-line"></div>
+      <div class="ktms-support-loading-line"></div>
+      <div class="ktms-support-loading-line"></div>
 
     </div>
   `;
 }
 
 
-function statusBadge(status) {
+function renderDetailLoading() {
+  return `
+    <div class="ktms-support-detail-loading">
+
+      <div class="ktms-support-loading-block"></div>
+      <div class="ktms-support-loading-block"></div>
+      <div class="ktms-support-loading-block"></div>
+
+    </div>
+  `;
+}
+
+
+function renderListError(message) {
+  return `
+    <div class="ktms-support-error-state">
+
+      <strong>
+        Unable to load support queue
+      </strong>
+
+      <p>
+        ${escapeHtml(message)}
+      </p>
+
+      <button
+        type="button"
+        class="ktms-secondary-button"
+        id="support-retry"
+      >
+        RETRY
+      </button>
+
+    </div>
+  `;
+}
+
+
+function renderDetailError(message) {
+  return `
+    <div class="ktms-support-error-state">
+
+      <strong>
+        Unable to load case
+      </strong>
+
+      <p>
+        ${escapeHtml(message)}
+      </p>
+
+    </div>
+  `;
+}
+
+
+function renderEmptyDetail() {
+  return `
+    <div class="ktms-support-empty-detail">
+
+      <div class="ktms-support-empty-detail-mark">
+        SUPPORT
+      </div>
+
+      <h3>
+        Select a case
+      </h3>
+
+      <p>
+        Choose a support case from the queue to review
+        its player context, conversation, evidence,
+        timeline and available actions.
+      </p>
+
+    </div>
+  `;
+}
+
+
+/* =========================================================
+   FEEDBACK
+   ========================================================= */
+
+function showFeedback(
+  message,
+  type = "info"
+) {
+  const element =
+    document.getElementById(
+      "support-message"
+    );
+
+  if (!element) return;
+
+  element.textContent =
+    message || "";
+
+  element.className =
+    `ktms-support-feedback is-visible ${type}`;
+
+  window.clearTimeout(
+    showFeedback.timeout
+  );
+
+  showFeedback.timeout =
+    window.setTimeout(() => {
+      element.textContent = "";
+      element.className =
+        "ktms-support-feedback";
+    }, 5000);
+}
+
+
+/* =========================================================
+   UI HELPERS
+   ========================================================= */
+
+function updateCaseCount() {
+  const element =
+    document.getElementById(
+      "support-case-count"
+    );
+
+  if (!element) return;
+
+  const count =
+    state.cases.length;
+
+  element.textContent =
+    `${count} ${count === 1 ? "case" : "cases"}`;
+}
+
+
+function updateCategoryOptions() {
+  const select =
+    document.getElementById(
+      "support-case-category"
+    );
+
+  if (!select) return;
+
+  const current =
+    state.filters.caseCategory;
+
+  const categories =
+    [
+      ...new Set(
+        state.cases
+          .map(
+            item =>
+              getCaseCategory(item)
+          )
+          .filter(Boolean)
+      )
+    ]
+      .sort();
+
+  select.innerHTML = `
+    <option value="">
+      All categories
+    </option>
+
+    ${categories
+      .map(
+        category => `
+          <option
+            value="${escapeAttribute(category)}"
+          >
+            ${escapeHtml(category)}
+          </option>
+        `
+      )
+      .join("")}
+  `;
+
+  select.value =
+    categories.includes(current)
+      ? current
+      : "";
+}
+
+
+function disableActionButtons(disabled) {
+  document
+    .querySelectorAll(
+      "[data-support-action]"
+    )
+    .forEach(button => {
+      button.disabled =
+        disabled;
+    });
+}
+
+
+/* =========================================================
+   DATA NORMALIZATION
+   ========================================================= */
+
+function getCaseId(item) {
+  return String(
+    getField(
+      item,
+      [
+        "caseId",
+        "case_id",
+        "id"
+      ]
+    ) || ""
+  );
+}
+
+
+function getCaseStatus(item) {
+  return String(
+    getField(
+      item,
+      [
+        "status",
+        "caseStatus",
+        "case_status"
+      ]
+    ) || ""
+  );
+}
+
+
+function getCaseSubject(item) {
+  return String(
+    getField(
+      item,
+      [
+        "subject",
+        "caseSubject",
+        "case_subject"
+      ]
+    ) || ""
+  );
+}
+
+
+function getCaseType(item) {
+  return String(
+    getField(
+      item,
+      [
+        "caseType",
+        "case_type",
+        "type"
+      ]
+    ) || ""
+  );
+}
+
+
+function getCaseCategory(item) {
+  return String(
+    getField(
+      item,
+      [
+        "caseCategory",
+        "case_category",
+        "category"
+      ]
+    ) || ""
+  );
+}
+
+
+function getCasePlayer(item) {
+  return String(
+    getField(
+      item,
+      [
+        "playerName",
+        "player_name",
+        "managerName",
+        "manager_name",
+        "playerId",
+        "player_id"
+      ]
+    ) || ""
+  );
+}
+
+
+function getCaseTournament(item) {
+  return String(
+    getField(
+      item,
+      [
+        "tournamentId",
+        "tournament_id"
+      ]
+    ) || ""
+  );
+}
+
+
+function getCaseModified(item) {
+  return getField(
+    item,
+    [
+      "lastModifiedDateTime",
+      "last_modified_datetime",
+      "modifiedDateTime",
+      "modified_datetime",
+      "updatedAt",
+      "updated_at"
+    ]
+  );
+}
+
+
+function getField(
+  object,
+  fields
+) {
+  if (!object) return "";
+
+  for (const field of fields) {
+    if (
+      object[field] !== undefined &&
+      object[field] !== null
+    ) {
+      return object[field];
+    }
+  }
+
+  return "";
+}
+
+
+function getArray(
+  object,
+  fields
+) {
+  const value =
+    getField(
+      object,
+      fields
+    );
+
+  return Array.isArray(value)
+    ? value
+    : [];
+}
+
+
+/* =========================================================
+   FORMATTING
+   ========================================================= */
+
+function formatDate(value) {
+  if (!value) {
+    return "—";
+  }
+
+  const date =
+    new Date(value);
+
+  if (
+    Number.isNaN(
+      date.getTime()
+    )
+  ) {
+    return escapeHtml(value);
+  }
+
+  return escapeHtml(
+    date.toLocaleString()
+  );
+}
+
+
+function formatMultiline(value) {
+  return escapeHtml(
+    value || "—"
+  ).replaceAll(
+    "\n",
+    "<br>"
+  );
+}
+
+
+function renderStatus(status) {
   if (!status) {
     return `
       <span class="ktms-support-status">
@@ -1928,12 +2021,12 @@ function statusBadge(status) {
     `;
   }
 
-
   return `
     <span
-      class="ktms-support-status ktms-support-status-${slug(
-        status
-      )}"
+      class="
+        ktms-support-status
+        ktms-support-status-${slug(status)}
+      "
     >
       ${escapeHtml(status)}
     </span>
@@ -1950,88 +2043,39 @@ function slug(value) {
     )
     .replace(
       /^-|-$/g,
-      "");
-}
-
-
-function formatDate(value) {
-  if (!value) {
-    return "—";
-  }
-
-
-  const date =
-    new Date(value);
-
-
-  if (
-    Number.isNaN(
-      date.getTime()
-    )
-  ) {
-    return escapeHtml(
-      value
+      ""
     );
-  }
-
-
-  return escapeHtml(
-    date.toLocaleString()
-  );
-}
-
-
-function setMessage(
-  message,
-  type = "info"
-) {
-  const element =
-    document.getElementById(
-      "support-message"
-    );
-
-
-  if (!element) {
-    return;
-  }
-
-
-  element.className =
-    `ktms-message ${type}`;
-
-
-  element.textContent =
-    message || "";
 }
 
 
 function escapeHtml(value) {
   return String(value)
-    .replaceAll(
-      "&",
-      "&amp;"
-    )
-    .replaceAll(
-      "<",
-      "&lt;"
-    )
-    .replaceAll(
-      ">",
-      "&gt;"
-    )
-    .replaceAll(
-      '"',
-      "&quot;"
-    )
-    .replaceAll(
-      "'",
-      "&#039;"
-    );
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
 }
 
 
 function escapeAttribute(value) {
-  return escapeHtml(
-    value
-  );
+  return escapeHtml(value);
+}
+
+
+function debounce(
+  callback,
+  delay
+) {
+  let timer = null;
+
+  return (...args) => {
+    window.clearTimeout(timer);
+
+    timer =
+      window.setTimeout(
+        () => callback(...args),
+        delay
+      );
+  };
 }
