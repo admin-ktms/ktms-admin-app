@@ -1,5 +1,6 @@
 import { supabase } from "../lib/supabase.js";
 import { CONFIG } from "../config.js";
+import { createTraceId, logError, logInfo, logTrace, logWarn } from "../utils/logger.js";
 
 const ADMIN_SESSION_KEY = "ktms_admin_session";
 
@@ -322,6 +323,18 @@ export async function adminApi(
       "X-KTMS-Admin-Session"
     ] = adminSessionToken;
   }
+
+  const traceId = createTraceId();
+  const route = window.location.pathname;
+  const startedAt = performance.now();
+
+  logInfo("API_REQUEST_STARTED", {
+    traceId,
+    action,
+    route,
+    supabaseSession: true,
+    ktmsSession: action === "admin.session.start" ? false : true
+  });
 
   const response = await fetch(
     CONFIG.ADMIN_API_URL,
