@@ -253,6 +253,10 @@ export async function adminApi(
   action,
   payload = {}
 ) {
+  const traceId = createTraceId();
+  const route = window.location.pathname;
+  const startedAt = performance.now();
+
   if (!action) {
     const error = new Error(
       "KTMS Admin API action is required."
@@ -261,8 +265,21 @@ export async function adminApi(
     error.code = "ACTION_REQUIRED";
     error.status = 400;
 
+    logError("API_REQUEST_REJECTED", {
+      traceId,
+      action: null,
+      route,
+      errorCode: error.code
+    });
+
     throw error;
   }
+
+  logInfo("API_REQUEST_STARTED", {
+    traceId,
+    action,
+    route
+  });
 
   const {
     data: {
@@ -272,6 +289,13 @@ export async function adminApi(
   } = await supabase.auth.getSession();
 
   if (sessionError) {
+    logError("API_SESSION_LOOKUP_FAILED", {
+      traceId,
+      action,
+      route,
+      errorCode: sessionError.code || "SUPABASE_SESSION_ERROR",
+      errorMessage: sessionError.message
+    });
     throw sessionError;
   }
 
@@ -283,25 +307,24 @@ export async function adminApi(
     error.code = "SUPABASE_AUTH_REQUIRED";
     error.status = 401;
 
+    logWarn("API_AUTH_REQUIRED", {
+      traceId,
+      action,
+      route,
+      status: 401,
+      errorCode: error.code
+    });
+
     throw error;
   }
 
   const headers = {
     "Content-Type": "application/json",
     "Authorization":
-      `Bearer ${session.access_token}`
+      `Bearer ${session.access_token}`,
+    "X-KTMS-Trace-ID": traceId
   };
 
-  /*
-   * admin.session.start is the bridge:
-   *
-   * Supabase Auth
-   *       ↓
-   * KTMS Admin Session
-   *
-   * Therefore it does not require the KTMS
-   * session header yet.
-   */
   if (action !== "admin.session.start") {
     const adminSessionToken =
       getStoredAdminSessionToken();
@@ -311,47 +334,73 @@ export async function adminApi(
         "KTMS administrator session is missing."
       );
 
-      error.code =
-        "KTMS_SESSION_REQUIRED";
-
+      error.code = "KTMS_SESSION_REQUIRED";
       error.status = 401;
+
+      logWarn("API_KTMS_SESSION_REQUIRED", {
+        traceId,
+        action,
+        route,
+        status: 401,
+        errorCode: error.code
+      });
 
       throw error;
     }
 
-    headers[
-      "X-KTMS-Admin-Session"
-    ] = adminSessionToken;
+    headers["X-KTMS-Admin-Session"] =
+      adminSessionToken;
   }
 
-  const traceId = createTraceId();
-  const route = window.location.pathname;
-  const startedAt = performance.now();
+  let response;
 
-  logInfo("API_REQUEST_STARTED", {
-    traceId,
-    action,
-    route,
-    supabaseSession: true,
-    ktmsSession: action === "admin.session.start" ? false : true
-  });
+  try {
+    response = await fetch(
+      CONFIG.ADMIN_API_URL,
+      {
+        method: "POST",
+        headers,
+        body: JSON.stringify({
+          action,
+          ...payload
+        })
+      }
+    );
+  } catch (error) {
+    logError("API_NETWORK_FAILURE", {
+      traceId,
+      action,
+      route,
+      errorCode: error?.name || "FETCH_ERROR",
+      errorMessage: error?.message || String(error),
+      durationMs: Math.round(performance.now() - startedAt)
+    });
+    throw error;
+  }
 
-  const response = await fetch(
-    CONFIG.ADMIN_API_URL,
-    {
-      method: "POST",
-      headers,
-      body: JSON.stringify({
-        action,
-        ...payload
-      })
-    }
-  );
+  let result;
 
-  const result = await parseJsonResponse(
-    response,
-    "KTMS Admin API"
-  );
+  try {
+    result = await parseJsonResponse(
+      response,
+      "KTMS Admin API"
+    );
+  } catch (error) {
+    logError("API_RESPONSE_PARSE_FAILED", {
+      traceId,
+      action,
+      route,
+      status: response.status,
+      errorCode: error?.code || "INVALID_SERVER_RESPONSE",
+      durationMs: Math.round(performance.now() - startedAt)
+    });
+    throw error;
+  }
+
+  const backendTraceId =
+    result?.traceId ||
+    result?.error?.traceId ||
+    null;
 
   if (
     !response.ok ||
@@ -380,8 +429,28 @@ export async function adminApi(
       clearAdminSessionToken();
     }
 
+    logError("API_REQUEST_FAILED", {
+      traceId,
+      backendTraceId,
+      action,
+      route,
+      status: response.status,
+      errorCode: error.code,
+      errorMessage: error.message,
+      durationMs: Math.round(performance.now() - startedAt)
+    });
+
     throw error;
   }
+
+  logInfo("API_REQUEST_COMPLETED", {
+    traceId,
+    backendTraceId,
+    action,
+    route,
+    status: response.status,
+    durationMs: Math.round(performance.now() - startedAt)
+  });
 
   return result.data;
 }
