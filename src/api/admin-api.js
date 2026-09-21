@@ -1,6 +1,6 @@
 import { supabase } from "../lib/supabase.js";
 import { CONFIG } from "../config.js";
-import { createTraceId, logError, logInfo, logTrace, logWarn } from "../utils/logger.js";
+import { createTraceId, logError, logInfo, logWarn } from "../utils/logger.js";
 
 const ADMIN_SESSION_KEY = "ktms_admin_session";
 
