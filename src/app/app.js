@@ -33,6 +33,7 @@ const navigation = [
   ["notifications", "Notifications", "/notifications"],
   ["support", "Support", "/support"],
   ["operations", "Operations", "/operations"],
+  ["diagnostics", "Diagnostics", "/diagnostics"],
   ["audit", "Audit", "/audit"],
   ["administrators", "Administrators", "/administrators"]
 ];
@@ -114,6 +115,7 @@ export async function renderRoute(page, route, admin) {
     notifications: "Notifications",
     support: "Support",
     operations: "Operations",
+    diagnostics: "Diagnostics",
     audit: "Audit",
     administrators: "Administrators"
   };
@@ -186,6 +188,10 @@ export async function renderRoute(page, route, admin) {
   if (route === "support") {
   return renderSupport(content, admin);
 }
+
+  if (route === "diagnostics") {
+    return renderDiagnostics(content, admin);
+  }
 
   content.innerHTML = `
     <div class="ktms-empty-state">
