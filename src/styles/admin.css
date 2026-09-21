@@ -10255,3 +10255,202 @@ function escapeAttribute(value) {
     gap: 5px;
   }
 }
+
+
+/* =========================================================
+   DIAGNOSTICS
+   ========================================================= */
+
+.ktms-diagnostics-panel {
+  margin-top: 20px;
+  padding: 20px;
+  border: 1px solid var(--ktms-border);
+  border-radius: var(--ktms-radius-lg);
+  background: var(--ktms-surface);
+  box-shadow: var(--ktms-shadow-sm);
+}
+
+.ktms-diagnostics-panel-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 16px;
+}
+
+.ktms-diagnostics-panel-header h3 {
+  margin: 0;
+  color: var(--ktms-text);
+  font-size: 15px;
+}
+
+.ktms-diagnostics-panel-header p {
+  margin: 5px 0 0;
+  color: var(--ktms-text-muted);
+  font-size: 12px;
+}
+
+.ktms-diagnostics-level {
+  display: grid;
+  gap: 5px;
+  min-width: 130px;
+}
+
+.ktms-diagnostics-level > span {
+  color: var(--ktms-text-muted);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+
+.ktms-diagnostics-filters {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 150px;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.ktms-diagnostics-count {
+  margin-bottom: 8px;
+  color: var(--ktms-text-muted);
+  font-size: 10px;
+}
+
+.ktms-diagnostics-table {
+  min-width: 920px;
+}
+
+.ktms-diagnostics-table tbody tr {
+  cursor: pointer;
+}
+
+.ktms-diagnostics-table tbody tr:hover {
+  background: var(--ktms-primary-soft);
+}
+
+.ktms-diagnostics-mono,
+.ktms-diagnostics-detail {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+.ktms-diagnostics-mono {
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ktms-diagnostics-detail {
+  min-height: 180px;
+  max-height: 480px;
+  margin: 0;
+  padding: 15px;
+  overflow: auto;
+  border: 1px solid var(--ktms-border);
+  border-radius: var(--ktms-radius-md);
+  background: #0D1118;
+  color: var(--ktms-text);
+  font-size: 11px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.ktms-diagnostics-authorized,
+.ktms-diagnostics-denied {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 4px;
+  padding: 14px 16px;
+  border-radius: var(--ktms-radius-md);
+}
+
+.ktms-diagnostics-authorized {
+  border: 1px solid var(--ktms-primary-border);
+  background: var(--ktms-primary-soft);
+}
+
+.ktms-diagnostics-authorized span {
+  color: var(--ktms-primary);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+}
+
+.ktms-diagnostics-authorized strong {
+  color: var(--ktms-text);
+  font-size: 12px;
+}
+
+.ktms-diagnostics-authorized small {
+  color: var(--ktms-text-muted);
+  font-size: 10px;
+}
+
+.ktms-diagnostics-denied {
+  border: 1px solid rgba(255, 92, 108, 0.3);
+  background: var(--ktms-danger-soft);
+}
+
+.ktms-diagnostics-denied strong {
+  color: var(--ktms-danger);
+  font-size: 12px;
+}
+
+.ktms-diagnostics-denied p,
+.ktms-diagnostics-denied span {
+  margin: 0;
+  color: var(--ktms-text-muted);
+  font-size: 11px;
+}
+
+.ktms-diagnostics-level-badge {
+  display: inline-flex;
+  padding: 3px 7px;
+  border: 1px solid var(--ktms-border);
+  border-radius: 999px;
+  font-size: 9px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.ktms-diagnostics-level-error {
+  border-color: rgba(255, 92, 108, 0.35);
+  color: var(--ktms-danger);
+}
+
+.ktms-diagnostics-level-warn {
+  border-color: var(--ktms-gold-border);
+  color: var(--ktms-gold);
+}
+
+.ktms-diagnostics-level-info,
+.ktms-diagnostics-level-debug,
+.ktms-diagnostics-level-trace {
+  border-color: var(--ktms-primary-border);
+  color: var(--ktms-primary);
+}
+
+.ktms-diagnostics-empty {
+  padding: 28px !important;
+  color: var(--ktms-text-muted) !important;
+  text-align: center;
+}
+
+@media (max-width: 760px) {
+  .ktms-diagnostics-panel-header,
+  .ktms-diagnostics-filters {
+    grid-template-columns: 1fr;
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .ktms-diagnostics-level {
+    width: 100%;
+  }
+
+  .ktms-diagnostics-panel .ktms-action-row {
+    width: 100%;
+  }
+}
