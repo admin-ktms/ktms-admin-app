@@ -321,7 +321,8 @@ export async function adminApi(
   const headers = {
     "Content-Type": "application/json",
     "Authorization":
-      `Bearer ${session.access_token}`
+      `Bearer ${session.access_token}`,
+    "X-KTMS-Trace-ID": traceId
   };
 
   if (action !== "admin.session.start") {
