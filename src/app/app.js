@@ -39,6 +39,7 @@ const navigation = [
 ];
 
 export function renderAppShell(app, admin, route) {
+  const canViewDiagnostics = admin?.role === "Game Master" || admin?.role === "Platform Manager";
   app.innerHTML = `
     <div class="ktms-app">
 
@@ -50,7 +51,7 @@ export function renderAppShell(app, admin, route) {
         </div>
 
         <nav class="ktms-navigation">
-          ${navigation.map(([key, label, path]) => `
+          ${navigation.filter(([key]) => key !== "diagnostics" || canViewDiagnostics).map(([key, label, path]) => `
             <button
               class="ktms-nav-item ${route === key ? "active" : ""}"
               data-route="${path}"
