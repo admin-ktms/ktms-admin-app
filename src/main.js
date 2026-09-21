@@ -2,6 +2,8 @@ import "./styles/admin.css";
 
 import { supabase } from "./lib/supabase.js";
 
+import { logError, logWarn, logInfo } from "./utils/logger.js";
+
 import {
   sendVerificationCode,
   verifyVerificationCode,
@@ -25,6 +27,25 @@ import {
 } from "./app/app.js";
 
 const app = document.getElementById("app");
+
+window.addEventListener("error", (event) => {
+  logError("UNHANDLED_FRONTEND_ERROR", {
+    route: window.location.pathname,
+    errorMessage: event?.error?.message || event?.message || "Unknown frontend error",
+    source: event?.filename || null,
+    line: event?.lineno || null,
+    column: event?.colno || null
+  });
+});
+
+window.addEventListener("unhandledrejection", (event) => {
+  const reason = event?.reason;
+  logError("UNHANDLED_PROMISE_REJECTION", {
+    route: window.location.pathname,
+    errorCode: reason?.code || reason?.name || "UNHANDLED_REJECTION",
+    errorMessage: reason?.message || String(reason || "Unknown rejection")
+  });
+});
 
 if (!app) {
   throw new Error(
