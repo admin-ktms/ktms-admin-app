@@ -17,6 +17,7 @@ import {
 import {
   renderSupport
 } from "../modules/support/support.js";
+import { renderDiagnostics } from "../modules/diagnostics/diagnostics.js";
 
 const navigation = [
   ["dashboard", "Dashboard", "/dashboard"],
