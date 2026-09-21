@@ -13,6 +13,7 @@ const routes = {
   "/notifications": "notifications",
   "/support": "support",
   "/operations": "operations",
+  "/diagnostics": "diagnostics",
   "/audit": "audit",
   "/administrators": "administrators"
 };
